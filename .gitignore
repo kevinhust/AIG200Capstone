@@ -56,6 +56,8 @@ data/embeddings/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/embeddings/.gitkeep
+data/knowledge_base/*
+!data/knowledge_base/.gitkeep
 
 # Model checkpoints
 *.pt
