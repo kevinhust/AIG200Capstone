@@ -1,16 +1,30 @@
 # L3 Data Architecture
 # Personal Health Butler AI
 
-> **Version**: 1.1
-> **Last Updated**: 2026-01-16
+> **Version**: 1.2
+> **Last Updated**: 2026-01-18
 > **Parent Document**: [PRD v1.1](./PRD-Personal-Health-Butler.md)
 > **TOGAF Layer**: L3 - Data Architecture
 
 ---
 
-## 1. Data Architecture Overview
+## 1. Data Strategy: Hybrid Intelligence
 
-### 1.1 Data Domains (Simplified)
+Our system distinguishes between **Pattern Recognition** (done by pre-trained models) and **Factual Knowledge** (sourced from trusted databases) to prevent hallucinations.
+
+| Feature | Data Source | Technology | Update Freq |
+|---------|-------------|------------|-------------|
+| **Visual Detection** | Pre-trained Patterns | **YOLO26** (COCO + Synthetic Food-101) | Static (Build-time) |
+| **Nutritional Facts** | Trusted Database | **USDA Food Data** (RAG Retrieval) | Monthly (ETL) |
+| **User Context** | User Input | **Ephemeral Session** (RAM) | Real-time |
+
+> **Addressing Source Feedback**: We do NOT rely on the LLM's internal knowledge for nutrition facts (which are prone to hallucination). We use the LLM only for reasoning, while facts are retrieved from the USDA database.
+
+---
+
+## 2. Data Architecture Overview
+
+### 2.1 Data Domains
 
 ```mermaid
 graph TB
@@ -35,102 +49,73 @@ graph TB
     end
 ```
 
-### 1.2 Data Flow & Privacy
+### 2.2 Data Flow & Privacy
 
-- **Ingestion**: Public data (USDA) -> Chunking -> Vector Store.
-- **Runtime**: User Image -> RAM -> Inference -> **Delete**.
-- **Privacy Guarantee**: No user images are ever written to disk. No database persists user conversations.
+-   **Ingestion (Build Time)**: Public data (USDA) -> Chunking -> Vector Store -> **Baked into Container**.
+-   **Runtime**: User Image -> RAM -> Inference -> **Delete**.
+-   **Privacy Guarantee**: 
+    -   No user images are written to disk. 
+    -   Images are processed in-memory using `io.BytesIO`.
+    -   No conversation logs persist after session end.
 
 ---
 
-## 2. Knowledge Base Schema
+## 3. Detailed ETL Pipeline (Knowledge Base)
 
-### 2.1 Chunk Structure (Optimized for RAG)
+To ensure trusted data, we implement a strict ETL pipeline for the RAG Knowledge Base.
+
+**Source**: `USDA FoodData Central` (JSON API)
+
+1.  **Extract**: Download "Foundation Foods" dataset (approx 30k verified items).
+2.  **Transform**:
+    -   Clean and normalize fields (Calories, Protein, Fat, Carbs).
+    -   Format into text chunks: *"100g of raw Broccoli contains 34 calories, 2.8g protein..."*
+3.  **Embed**:
+    -   Model: `intfloat/e5-large-v2` (1024 dimensions).
+    -   Process: Batch embed -> Normalize vectors.
+4.  **Load**:
+    -   Build `FAISS` Index (`IndexFlatIP`).
+    -   Save `index.faiss` and `metadata.json` to `data/knowledge_base/`.
+
+---
+
+## 4. Storage Architecture
+
+### 4.1 Knowledge Storage (Read-Only)
+
+| Component | Format | Est. Size | Provisioning |
+|-----------|--------|-----------|--------------|
+| **FAISS Index** | Binary (`.faiss`) | ~500 MB | **Baked into Docker Image** |
+| **Metadata** | JSON/SQLite | ~100 MB | **Baked into Docker Image** |
+| **YOLO Weights**| `.pt` / `.onnx` | ~15 MB | **Baked into Docker Image** |
+
+*Rationale*: Baking data into the image ensures zero-latency startup and consistency across Cloud Run instances.
+
+### 4.2 Runtime Storage (Ephemeral)
+
+| Data Type | Storage Mechanism | Lifecycle |
+|-----------|------------------|-----------|
+| **User Images** | `io.BytesIO` (RAM) | Dropped after inference |
+| **Chat History** | `Streamlit Session State` | Dropped on tab close |
+| **Feedback** | `structlog` (JSON) | Streamed to Cloud Logging (Anonymized) |
+
+---
+
+## 5. Knowledge Base Schema
+
+### 5.1 Chunk Structure
 
 ```python
 @dataclass
 class KnowledgeChunk:
     """Standardized Knowledge Unit"""
     id: str
-    content: str          # Text content (e.g., "Bananas contain 89 calories per 100g...")
-    source: str           # "USDA", "OpenFoodFacts"
-    source_url: str       # Verifiable link
-    embedding: List[float] # 1024-dim (e5-large-v2)
-    metadata: Dict[str, Any] # {"food_group": "fruit", "verified": true}
-```
-
-### 2.2 Vector Store (FAISS)
-
-- **Index Type**: `IndexFlatIP` (Inner Product for Cosine Similarity) for high recall.
-- **Dimension**: 1024 (matching `intfloat/e5-large-v2`).
-- **Storage**: disk-based `index.faiss` file (read-only at runtime).
-
----
-
-## 3. Data Sources & Governance
-
-### 3.1 Primary Data Sources
-
-| Domain | Source | License | Integration Method | 2026 Compliance Note |
-|--------|--------|---------|--------------------|----------------------|
-| **Nutrition** | **USDA FoodData Central** | Public Domain | JSON API / Bulk CSV | Government source, high trust |
-| **Nutrition** | **Open Food Facts** | ODbL (Open) | Data Dump | community-verified data |
-| **Fitness** | **ExRx / Public Guidelines** | Check Terms | Manual Curation | Citation required for reliability |
-
-### 3.2 Privacy & Ethics
-
-- **Differential Privacy**: Not strictly applicable to *public* knowledge, but applied if aggregating any user stats (future).
-- **Synthetic Data**: For training YOLO26, we will prioritize **synthetic food datasets** (generated via Diffusion models) to augment Food-101, avoiding potential privacy/copyright issues with scraped web images.
-- **Bias Mitigation**: Ensure "Food-101" + Synthetic data covers:
-    - Asian/Indian cuisines (Curries, Dumplings)
-    - African cuisines
-    - Various lighting conditions
-
----
-
-## 4. Runtime Data Models
-
-### 4.1 Ephemeral Session
-
-```python
-@dataclass
-class SessionData:
-    """Exists only in Streamlit Session State"""
-    session_id: str
-    user_goal: str  # "lose_weight", "maintain"
-    history: List[Message]
-    last_analysis: Optional[AnalysisResult]
-```
-
-### 4.2 Analysis Result
-
-```python
-@dataclass
-class FoodItem:
-    label: str          # e.g., "Grilled Chicken"
-    confidence: float   # 0.0 - 1.0
-    calories_100g: int  # Retrieved from KB
-    macros: MacroNutrients
+    content: str          # "Broccoli: 34kcal/100g..."
+    source: str           # "USDA ID: 11090"
+    embedding: List[float] # 1024-dim
+    metadata: Dict[str, Any] # {"macros": {"p": 2.8, "c": 7, "f": 0.4}}
 ```
 
 ---
 
-## 5. Storage Estimates
-
-| Component | Estimate | Storage Location |
-|-----------|----------|------------------|
-| **FAISS Index** | ~500 MB | Local Container FS |
-| **YOLO26 Model**| ~15 MB  | Local Container FS |
-| **User Data** | 0 MB | Memory (RAM) |
-
----
-
-## 6. Implementation Checklist (Milestone 1-2)
-
-- [ ] **Data Ingestion Script**: Python script to fetch USDA JSON and normalize to `KnowledgeChunk`.
-- [ ] **Embedding Pipeline**: Script using `sentence-transformers` to batch process chunks.
-- [ ] **Validation Set**: Create 50 careful queries ("How much protein in an egg?") to test Retrieval Recall.
-
----
-
-**Document Status**: 🟢 Draft v1.1 - Privacy-First & Reduced Scope
+**Document Status**: 🟢 Version 1.2 - Detailed Infrastructure

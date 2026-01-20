@@ -167,7 +167,7 @@ The system is decomposed into highly decoupled modules. Each module has:
 
 | Module Name                      | Owner                        | Primary Deliverable (Independent)                            | Dependencies (Minimal)               | Target Completion |
 | -------------------------------- | ---------------------------- | ------------------------------------------------------------ | ------------------------------------ | ----------------- |
-| 1. Data & RAG Pipeline           | Aziz                         | USDA/Open Food Facts data ingestion, chunking, FAISS index, simple retrieval demo | None                                 | Week 2–4          |
+| 1. Data & RAG Pipeline           | Wangchuk                     | USDA/Open Food Facts data ingestion, chunking, FAISS index, simple retrieval demo | None                                 | Week 2–4          |
 | 2. CV / Food Recognition         | Wangchuk                     | YOLO26 baseline, Food-101 download, inference script (image → JSON foods list) | None                                 | Week 2–5          |
 | 3. Nutrition Agent               | Wangchuk (lead) + Aziz (RAG) | YOLO output + RAG → nutrition analysis & suggestions (standalone script) | Module 1 & 2 outputs (mock OK)       | Week 4–6          |
 | 4. Fitness Agent                 | Kevin                        | User profile + nutrition input → exercise suggestions (rule-based + RAG) | Mock nutrition input                 | Week 4–6          |
