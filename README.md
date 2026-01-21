@@ -25,7 +25,7 @@ The **Personal Health Butler** is an AI-powered nutrition assistant that leverag
                                 │
 ┌───────────────────────────────▼─────────────────────────────────────┐
 │                      Coordinator Agent                               │
-│                    (LangGraph Orchestration)                         │
+│                    (OpenAI Swarm Orchestration)                      │
 └───┬───────────────┬───────────────┬───────────────┬─────────────────┘
     │               │               │               │
 ┌───▼───┐     ┌─────▼─────┐   ┌─────▼─────┐   ┌─────▼─────┐
@@ -39,7 +39,7 @@ The **Personal Health Butler** is an AI-powered nutrition assistant that leverag
 │                    Shared Services Layer                             │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                  │
 │  │ RAG VectorDB│  │  CV Models  │  │ LLM Reasoner│                  │
-│  │   (FAISS)   │  │   (YOLO26)  │  │(Gemini 2.5) │                  │
+│  │ (ChromaDB)  │  │(Transfmr ViT)│  │(Gemini 2.5) │                  │
 │  └─────────────┘  └─────────────┘  └─────────────┘                  │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -51,33 +51,28 @@ The **Personal Health Butler** is an AI-powered nutrition assistant that leverag
 ```
 AIG200Capstone/
 ├── docs/                           # 📚 Design Documents
-│   ├── PRD-Personal-Health-Butler.md    # Product Requirements (v1.1)
-│   ├── L1-Business-Architecture.md      # Business Processes
-│   ├── L2-Application-Architecture.md   # System Components
-│   ├── L3-Data-Architecture.md          # Data & Privacy
-│   └── L4-Technology-Architecture.md    # Tech Stack (2026)
-│
-├── src/                            # Source Code (Modular)
-│   ├── data_rag/                   # Data Pipeline
-│   ├── cv_food_rec/                # Vision Models
-│   ├── agents/                     # Agent Logic
-│   └── ui_streamlit/               # Frontend
-│
+├── health_butler/                  # 🏥 Core Application Code
+│   ├── agents/                     # Agent Modules
+│   ├── tools/                      # Setup Tools (RAG, Vision)
+│   ├── scripts/                    # Data Ingestion
+│   └── main.py                     # Entrypoint
+├── openspec/                       # 📋 Spec-Driven Development
+├── tests/                          # Automated Tests
 └── README.md                       # This file
 ```
 
 ---
 
-## 🛠️ Tech Stack (MVP)
+## 🛠️ Tech Stack (Prototype Phase 2)
 
 | Category | Technologies |
 |----------|-------------|
-| Agent Framework | **LangGraph** |
-| LLM | **Gemini 2.5 Flash** (Primary), DeepSeek (Fallback) |
-| Computer Vision | **YOLO26-Nano** |
-| Vector Database | **FAISS** (Local) |
-| Embedding | **e5-large-v2** |
-| Deployment | **Cloud Run** (Serverless) |
+| Agent Orchestrator | **OpenAI Swarm** (Lightweight Routing) |
+| LLM | **Gemini 2.5 Flash** |
+| Computer Vision | **ViT (Vision Transformer)** (Classification) |
+| Vector Database | **ChromaDB** (Local & Semantic) |
+| Embedding | **Sentence Transformers** |
+| Deployment | **Streamlit** (Local Prototype) |
 
 ---
 
@@ -97,7 +92,7 @@ AIG200Capstone/
 | Milestone | Week | Focus | Status |
 |-----------|------|-------|--------|
 | **MS1** | 3 | Project Definition & Architecture | 🟢 Complete |
-| **MS2** | 6 | Data Prep & Core Prototypes (YOLO/RAG) | ⬜ Next |
+| **MS2** | 6 | Data Prep & Core Prototypes (ViT/Chroma/Streamlit) | 🔵 In Progress |
 | **MS3** | 9 | Integration & Agent Logic | ⬜ Planned |
 | **MS4** | 12 | Deployment & Polish | ⬜ Planned |
 

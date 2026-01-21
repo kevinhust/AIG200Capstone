@@ -15,11 +15,18 @@
 | Layer | Component | Technology | Rationale |
 |-------|-----------|------------|-----------|
 | **Frontend** | Web UI | **Streamlit** (v1.40+) | Fast iteration, Python native |
-| **Logic** | Orchestration | **LangGraph** | Cyclic agentic workflows |
-| **Reasoning** | LLM | **Gemini 2.5 Flash** | Low latency, multimodal, cost-effective |
-| **Vision** | Object Detection | **YOLO26-Nano** | Edge-optimized (15MB), CPU-friendly |
-| **Retrieval** | Vector DB | **FAISS** (Local Index) | No external DB dependency (Self-contained) |
-| **Embedding** | Model | **e5-large-v2** | State-of-the-art open embedding |
+| **Orchestration** | Agent Framework | **OpenAI Swarm** | Lightweight, stateless agent handoffs |
+| **Logic/Reasoning** | Primary LLM | **Gemini 2.5 Flash** | Low latency, multimodal native, cost-effective |
+| | Fallback LLM | **DeepSeek-V3** | High intelligence/cost ratio |
+| **Vision** | Object Classification | **ViT-Base** (HuggingFace) | High accuracy on Food-101, easy integration |
+| **Data** | Vector DB | **ChromaDB** (Local) | Metadata filtering support, easy setup |
+| | Embedding | **Sentence Transformers** | High quality semantic search |
+
+### 1.2 Development Environment
+
+- **Python**: 3.11+ (Stable 2026 choice)
+- **Dependency Mgmt**: **pip** (Standard)
+- **Containerization**: Docker (Multi-stage builds)
 
 ---
 
@@ -29,20 +36,20 @@
 
 To simplify deployment on serverless platforms (Cloud Run), we adopt a **Self-Contained Container** strategy.
 
--   **YOLO26 Weights**: Included in the Docker image at `/app/models/yolo26-n.pt`.
--   **FAISS Index**: Pre-computed during CI/CD and copied to `/app/data/knowledge_base/index.faiss`.
--   **Embedding Model**: Cached in `/app/models/sentence-transformers/` during build to avoid runtime download.
+-   **ViT Model**: Downloaded via `transformers` cache during build.
+-   **ChromaDB**: Local persistence at `/app/data/chroma_db`.
+-   **Embedding Model**: Cached in `/app/models/sentence-transformers/` during build.
 
 **Trade-off Analysis:**
 -   *Pros*: Zero cold-start download time, consistent versioning, no external volume dependency.
--   *Cons*: Image size increases (~1GB total). Handled well by standard container registries.
+-   *Cons*: Image size increases (~2GB+). Handled well by standard container registries.
 
 ### 2.2 Image Storage Infrastructure
 
 We strictly adhere to a **Privacy-First (No-Log)** architecture for user images.
 
 -   **Ingest**: Streamlit `file_uploader` reads image into RAM (`io.BytesIO`).
--   **Process**: YOLO and Gemini accept base64-encoded strings or byte streams directly from RAM.
+-   **Process**: ViT accepts PIL images directly from RAM.
 -   **Discard**: Memory is freed immediately after the request completes.
 -   **Logging**: Only metadata (e.g., "Food detected: Pizza, Conf: 0.95") is logged; pixel data is never serialized.
 
@@ -50,23 +57,18 @@ We strictly adhere to a **Privacy-First (No-Log)** architecture for user images.
 
 ## 3. Dependency Specification
 
-### 3.1 Core Requirements (`pyproject.toml`)
+### 3.1 Core Requirements (`requirements.txt`)
 
-```toml
-[project]
-name = "health-butler-ai"
-version = "0.1.0"
-requires-python = ">=3.11"
-dependencies = [
-    "langgraph>=0.1.0",
-    "langchain-google-genai>=1.0",
-    "streamlit>=1.40.0",
-    "ultralytics>=8.3.0",              # YOLO26
-    "sentence-transformers>=3.0.0",
-    "faiss-cpu>=1.8.0",
-    "pydantic>=2.7.0",
-    "python-dotenv>=1.0.0"
-]
+```text
+google-genai>=1.0
+streamlit>=1.40.0
+transformers>=4.40.0
+torch>=2.2.0
+torchvision>=0.17.0
+chromadb>=0.4.24
+sentence-transformers>=2.7.0
+watchdog>=4.0.0
+python-dotenv>=1.0.0
 ```
 
 ---
