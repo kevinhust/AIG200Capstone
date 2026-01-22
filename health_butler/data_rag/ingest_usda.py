@@ -9,11 +9,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-from health_butler.tools.rag_tool import RagTool
+from health_butler.data_rag.rag_tool import RagTool
 
 # Constants
-DATA_RAW_DIR = Path("data/raw")
-DATA_PROCESSED_DIR = Path("data/processed")
+DATA_RAW_DIR = Path("health_butler/data/raw")
+DATA_PROCESSED_DIR = Path("health_butler/data/processed")
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

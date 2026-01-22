@@ -12,8 +12,8 @@ if str(PROJECT_ROOT) not in sys.path:
 # Import tools (Phase 2 Prototype)
 # In Phase 3, we will import the CoordinatorAgent here.
 try:
-    from health_butler.tools.vision_tool import VisionTool
-    from health_butler.tools.rag_tool import RagTool
+    from health_butler.cv_food_rec.vision_tool import VisionTool
+    from health_butler.data_rag.rag_tool import RagTool
 except ImportError as e:
     st.error(f"Failed to import core modules: {e}")
     st.stop()

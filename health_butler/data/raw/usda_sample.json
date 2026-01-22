@@ -1,0 +1,65 @@
+[
+  {
+    "fdcId": 1001,
+    "description": "Chicken breast, raw",
+    "foodNutrients": [
+      {
+        "nutrientName": "Protein",
+        "value": 23.1,
+        "unitName": "G"
+      },
+      {
+        "nutrientName": "Energy",
+        "value": 110,
+        "unitName": "KCAL"
+      },
+      {
+        "nutrientName": "Total lipid (fat)",
+        "value": 1.2,
+        "unitName": "G"
+      }
+    ]
+  },
+  {
+    "fdcId": 1002,
+    "description": "Broccoli, raw",
+    "foodNutrients": [
+      {
+        "nutrientName": "Protein",
+        "value": 2.8,
+        "unitName": "G"
+      },
+      {
+        "nutrientName": "Energy",
+        "value": 34,
+        "unitName": "KCAL"
+      },
+      {
+        "nutrientName": "Carbohydrate, by difference",
+        "value": 6.6,
+        "unitName": "G"
+      }
+    ]
+  },
+  {
+    "fdcId": 1003,
+    "description": "Rice, white, cooked",
+    "foodNutrients": [
+      {
+        "nutrientName": "Protein",
+        "value": 2.7,
+        "unitName": "G"
+      },
+      {
+        "nutrientName": "Energy",
+        "value": 130,
+        "unitName": "KCAL"
+      },
+      {
+        "nutrientName": "Carbohydrate, by difference",
+        "value": 28.0,
+        "unitName": "G"
+      }
+    ]
+  }
+]

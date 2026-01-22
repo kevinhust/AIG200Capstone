@@ -1,0 +1,35 @@
+[
+  {
+    "text": "Food: Chicken breast, raw. Nutrients per 100g: Protein: 23.1 G, Energy: 110 KCAL, Total lipid (fat): 1.2 G.",
+    "metadata": {
+      "source": "USDA",
+      "description": "Chicken breast, raw",
+      "protein": 23.1,
+      "calories": 110.0,
+      "fat": 1.2
+    },
+    "id": "1001"
+  },
+  {
+    "text": "Food: Broccoli, raw. Nutrients per 100g: Protein: 2.8 G, Energy: 34 KCAL, Carbohydrate, by difference: 6.6 G.",
+    "metadata": {
+      "source": "USDA",
+      "description": "Broccoli, raw",
+      "protein": 2.8,
+      "calories": 34.0,
+      "carbs": 6.6
+    },
+    "id": "1002"
+  },
+  {
+    "text": "Food: Rice, white, cooked. Nutrients per 100g: Protein: 2.7 G, Energy: 130 KCAL, Carbohydrate, by difference: 28.0 G.",
+    "metadata": {
+      "source": "USDA",
+      "description": "Rice, white, cooked",
+      "protein": 2.7,
+      "calories": 130.0,
+      "carbs": 28.0
+    },
+    "id": "1003"
+  }
+]

@@ -1,109 +1,88 @@
-# Personal Health Butler AI
+# AI Capstone Project Workspace
 
-> 🤖 A Multi-Agent AI Nutrition & Fitness Assistant (MVP v1.1)
+## Project: Personal Health Butler AI (Prototype)
 
-## 📋 Project Overview
-
-The **Personal Health Butler** is an AI-powered nutrition assistant that leverages **Multi-Agent Architecture** and **Retrieval-Augmented Generation (RAG)** to provide personalized, evidence-based wellness guidance.
-
-**Core Value**: Snap a photo of your meal -> Get instant calorie/macro analysis + science-backed advice.
-
-**Team**: Group 5 (Allen, Wangchuk, Aziz, Kevin)  
-**Course**: AI Graduate Certificate Capstone (2026)  
-**Duration**: 14 Weeks
-**Repository**: [GitHub](https://github.com/kevinhust/AIG200Capstone)
-**Agent Framework**: [Antigravity Template](docs/framework/en/README.md)
+> **Welcome Developers!**
+> This repository uses a specialized **Antigravity Scaffold** designed for efficient AI Agent development.
+> Please read this guide carefully before contributing.
 
 ---
 
-## 🏗️ Architecture Overview
+## 1. Directory Structure
+
+This workspace is divided into two distinct areas:
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Streamlit Dashboard                           │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-┌───────────────────────────────▼─────────────────────────────────────┐
-│                      Coordinator Agent                               │
-│                    (OpenAI Swarm Orchestration)                      │
-└───┬───────────────┬───────────────┬───────────────┬─────────────────┘
-    │               │               │               │
-┌───▼───┐     ┌─────▼─────┐   ┌─────▼─────┐   ┌─────▼─────┐
-│Nutrition│   │  Fitness  │   │  RAG      │   │   User    │
-│ Agent  │    │   Agent   │   │ Pipeline  │   │  Session  │
-└───┬────┘    └─────┬─────┘   └─────┬─────┘   └─────┬─────┘
-    │               │               │               │
-    └───────────────┴───────┬───────┴───────────────┘
-                            │
-┌───────────────────────────▼─────────────────────────────────────────┐
-│                    Shared Services Layer                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                  │
-│  │ RAG VectorDB│  │  CV Models  │  │ LLM Reasoner│                  │
-│  │ (ChromaDB)  │  │(Transfmr ViT)│  │(Gemini 2.5) │                  │
-│  └─────────────┘  └─────────────┘  └─────────────┘                  │
-└─────────────────────────────────────────────────────────────────────┘
+├── health_butler/           # 🍎 PRODUCT_ROOT: The core application functionality
+│   ├── agents/              # - Agent definitions (Coordinator, Nutrition, Fitness)
+│   ├── tools/               # - Capabilities (ViT Vision, RAG Engine)
+│   ├── scripts/             # - Data ingestion and setup scripts
+│   ├── app.py               # - Streamlit UI Entrypoint
+│   └── README.md            # - Product Specific Documentation
+│
+├── src/                     # 🛠️ SCAFFOLD_ROOT: Shared utilities & base classes
+│   └── agents/              # - BaseAgent, RouterAgent generic logic
+│
+├── openspec/                # 📋 SPEC_ROOT: Requirements & Change Management
+│   ├── specs/               # - Functional requirements (Foundation, Prototype)
+│   └── changes/             # - Proposed and archived changes
+│
+├── docs/                    # 📚 DOCS: Architecture (L1-L4), Research, and Milestones
+│
+└── tests/                   # ✅ TEST: Integration and Unit tests
 ```
 
 ---
 
-## 📁 Project Structure
+## 2. Quick Start
 
-```
-AIG200Capstone/
-├── docs/                           # 📚 Design Documents
-├── health_butler/                  # 🏥 Core Application Code
-│   ├── agents/                     # Agent Modules
-│   ├── tools/                      # Setup Tools (RAG, Vision)
-│   ├── scripts/                    # Data Ingestion
-│   └── main.py                     # Entrypoint
-├── openspec/                       # 📋 Spec-Driven Development
-├── tests/                          # Automated Tests
-└── README.md                       # This file
+### 2.1 Dependencies
+We use `pip` for this prototype phase.
+```bash
+# 1. Activate Environment (Assuming capstoneenv)
+source capstoneenv/bin/activate  # or similar
+
+# 2. Install Requirements
+pip install -r requirements.txt
 ```
 
----
-
-## 🛠️ Tech Stack (Prototype Phase 2)
-
-| Category | Technologies |
-|----------|-------------|
-| Agent Orchestrator | **OpenAI Swarm** (Lightweight Routing) |
-| LLM | **Gemini 2.5 Flash** |
-| Computer Vision | **ViT (Vision Transformer)** (Classification) |
-| Vector Database | **ChromaDB** (Local & Semantic) |
-| Embedding | **Sentence Transformers** |
-| Deployment | **Streamlit** (Local Prototype) |
+### 2.2 Running the App
+The **Phase 2 Prototype** interface is built with Streamlit.
+```bash
+streamlit run health_butler/app.py
+```
+> **Note**: This launches the UI at `http://localhost:8501`.
 
 ---
 
-## 👥 Team & Modules
+## 3. Development Workflow
 
-| Member | Role | Key Modules |
-|--------|------|-------------|
-| **Allen** | Orchestration Lead | Coordinator, Integration |
-| **Wangchuk** | CV/UI Lead | Food Recognition, Streamlit |
-| **Aziz** | Data/RAG Lead | Knowledge Pipeline, USDA Data |
-| **Kevin** | Fitness/Docs Lead | Fitness Agent, Documentation |
+### 3.1 Making Changes (OpenSpec)
+We strictly track requirements via OpenSpec.
+1.  **Define**: Create a proposal in `openspec/changes/<feature-name>/proposal.md`.
+2.  **Plan**: Define tasks in `openspec/changes/<feature-name>/tasks.md`.
+3.  **Implement**: Write code in `health_butler/`.
+4.  **Archive**: Run `openspec archive <feature-name>` to finalize.
 
----
+### 3.2 Adding Agents
+-   Create new agents in `health_butler/agents/`.
+-   Inherit from `src.agents.base_agent.BaseAgent`.
 
-## 📅 Milestones
-
-| Milestone | Week | Focus | Status |
-|-----------|------|-------|--------|
-| **MS1** | 3 | Project Definition & Architecture | 🟢 Complete |
-| **MS2** | 6 | Data Prep & Core Prototypes (ViT/Chroma/Streamlit) | 🔵 In Progress |
-| **MS3** | 9 | Integration & Agent Logic | ⬜ Planned |
-| **MS4** | 12 | Deployment & Polish | ⬜ Planned |
+### 3.3 Adding Tools
+-   Create tool classes in `health_butler/tools/`.
+-   Ensure they return standard dict-based outputs `{"status": "...", "data": ...}`.
 
 ---
 
-## 📄 Design Documents
-
-1. **[PRD v1.1](docs/PRD-Personal-Health-Butler.md)**: MVP Scope, Success Criteria
-2. **[L1 Business](docs/L1-Business-Architecture.md)**: Value Proposition, User Journeys
-3. **[L2 Application](docs/L2-Application-Architecture.md)**: Service Design, Interfaces
-4. **[L3 Data](docs/L3-Data-Architecture.md)**: Privacy, Knowledge Schema
-5. **[L4 Technology](docs/L4-Technology-Architecture.md)**: Stack, Security, CI/CD
+## 4. Tech Stack (Phase 2)
+-   **Orchestration**: OpenAI Swarm (Stateless Handoffs)
+-   **Vision**: Vision Transformer (ViT-Base) using HuggingFace
+-   **RAG**: ChromaDB + SentenceTransformers
+-   **UI**: Streamlit
 
 ---
+
+## 5. Collaboration
+-   **Branching**: Development happens on feature branches (e.g., `feature/login`).
+-   **Sync**: Push to `origin/Kevin` (or your personal branch) frequently.
+-   **Review**: Ensure `tests/` pass before merging.

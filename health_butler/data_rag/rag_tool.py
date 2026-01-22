@@ -13,7 +13,7 @@ class RagTool:
     Phase 2: ChromaDB + SentenceTransformers.
     """
 
-    def __init__(self, db_path: str = "data/chroma_db", collection_name: str = "nutrition_data"):
+    def __init__(self, db_path: str = "health_butler/data/chroma_db", collection_name: str = "nutrition_data"):
         self.db_path = db_path
         self.collection_name = collection_name
         

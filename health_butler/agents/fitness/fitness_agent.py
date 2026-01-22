@@ -1,5 +1,9 @@
 
+import logging
+from typing import Optional, List, Dict
 from src.agents.base_agent import BaseAgent
+
+logger = logging.getLogger(__name__)
 
 class FitnessAgent(BaseAgent):
     """
@@ -21,3 +25,10 @@ Your responsibilities:
 Keep your advice short, encouraging, and scientifically grounded.
             """
         )
+
+    def execute(self, task: str, context: Optional[List[Dict[str, str]]] = None) -> str:
+        """
+        Execute fitness advice task. Use context from Nutrition Agent if available.
+        """
+        logger.info(f"[FitnessAgent] Analyzing task: {task}")
+        return super().execute(task, context)

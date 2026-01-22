@@ -1,9 +1,16 @@
 # Product Requirements Document (PRD)
 **Personal Health Butler AI **  
-**Version**: 1.1 (Finalized for Milestone 1)  
-**Last Updated**: January 16, 2026  
+**Version**: 1.2 (Architecture Pivot)  
+**Last Updated**: January 21, 2026  
 **Team**: Group 5 (Allen, Wangchuk, Aziz, Kevin)  
-**Status**: 🟢 Approved for MVP Development  
+**Status**: 🟢 In Development (Phase 2)  
+
+### Document History
+| Version | Date | Author | Description of Change |
+| :--- | :--- | :--- | :--- |
+| **1.0** | 2026-01-10 | Group 5 | Initial Draft |
+| **1.1** | 2026-01-16 | Group 5 | Finalized for Milestone 1 MVP Scope |
+| **1.2** | 2026-01-21 | Kevin (Docs) | **Architecture Pivot**: Replaced YOLO26 (Detection) with **ViT (Vision Transformer)** for simpler integration and higher out-of-box accuracy on Food-101. |
 
 ---
 
@@ -30,7 +37,7 @@ A Multi-Agent system with:
 #### 2.1 In-Scope (MVP - P0 Must-Have)
 - **Multi-Agent Orchestration**: Coordinator + Nutrition Agent + Fitness Agent (using LangGraph for agentic flow)
 - **RAG Knowledge Pipeline**: Nutrition-focused vector DB (FAISS) with retrieval and grounding
-- **Food Recognition**: YOLO26-based detection from uploaded images (fine-tuned on Food-101 or similar)
+- **Food Recognition**: ViT-based classification (HuggingFace `nateraw/food-vit-101`) from uploaded images
 - **Nutrition Analysis**: Calorie/macro estimation + evidence-based dietary suggestions
 - **Streamlit Dashboard**: User interface for photo upload, text queries, session management, and evidence display
 - **Simple User Profile/Session**: Basic goals/preferences stored ephemerally
@@ -47,7 +54,7 @@ A Multi-Agent system with:
 #### 2.3 Success Criteria
 | Metric                             | Target          | Measurement Method                              |
 | ---------------------------------- | --------------- | ----------------------------------------------- |
-| Food recognition accuracy          | ≥85%            | Test set evaluation (Food-101 or equivalent)    |
+| Food recognition accuracy          | ≥85%            | Test set evaluation (Food-101 subset)           |
 | RAG retrieval relevance (Recall@5) | ≥80%            | Human evaluation on 50 sample nutrition queries |
 | End-to-end response latency        | <10s (P95)      | End-to-end timing in demo scenarios             |
 | Demo completeness                  | 100% functional | 3 core scenarios fully working in Streamlit     |
@@ -138,7 +145,7 @@ text
 ## 6. Technical Stack Summary
 
 - **Core**: LangGraph (orchestration), Gemini 2.5 Flash (primary LLM), DeepSeek/GLM fallback
-- **CV**: YOLO26 (edge-optimized)
+- **CV**: ViT (Transformer-based Classification)
 - **RAG**: FAISS + sentence-transformers
 - **Data**: USDA API (1000+ foods) + Open Food Facts backup
 - **UI**: Streamlit
@@ -179,7 +186,7 @@ The system is decomposed into highly decoupled modules. Each module has:
 
 All modules will follow agreed JSON/Pydantic interfaces to ensure loose coupling. Examples:
 
-- YOLO26 Output: {"foods": [{"name": "pizza", "confidence": 0.92, "bbox": [x,y,w,h]}]}
+- ViT Output: {"foods": [{"name": "pizza", "confidence": 0.92}]}
 - RAG Output: [{"content": "str", "source": "USDA", "score": 0.85}]
 - Agent Input/Output: Standardized run(input_dict) → output_dict
 
@@ -191,7 +198,7 @@ gantt
     dateFormat  YYYY-MM-DD
     section Weeks 1-2 (Parallel Kickoff)
     Data/RAG Setup (Aziz)              :active, a1, 2026-01-20, 2w
-    YOLO26 Baseline (Wangchuk)         :active, a2, after a1, 2w
+    ViT Baseline (Wangchuk)            :active, a2, after a1, 2w
     section Weeks 3-5
     Nutrition Agent Prototype          :a3, after a2, 3w
     Fitness Agent Prototype            :a4, after a1, 3w
@@ -234,7 +241,7 @@ gantt
 
 - **Milestone Alignment**:
 
-  - MS1 (Week 3): Module breakdown diagram + first baselines (YOLO inference, RAG retrieval demo)
+  - MS1 (Week 3): Module breakdown diagram + first baselines (ViT inference, RAG retrieval demo)
   - MS2 (Week 6): All individual prototypes running independently
   - MS3 (Week 9): Partial integration (e.g., Nutrition chain complete)
   - MS4 (Week 12): Full system + deployment
@@ -248,7 +255,7 @@ This approach minimizes risk, maximizes parallel progress, and ensures tangible 
 | Member       | Primary Role             | Modules                                        | Secondary          |
 | ------------ | ------------------------ | ---------------------------------------------- | ------------------ |
 | **Allen**    | Agent Orchestration Lead | Coordinator, LangGraph, Integration/Deployment | Full-stack support |
-| **Wangchuk** | UI/CV Lead               | Streamlit, Nutrition Agent (YOLO26)            | Data exploration   |
+| **Wangchuk** | UI/CV Lead               | Streamlit, Nutrition Agent (ViT)               | Data exploration   |
 | **Aziz**     | RAG/Data Lead            | RAG Pipeline, FAISS, USDA                      | Knowledge curation |
 | **Kevin**    | Fitness/Docs Lead        | Fitness Agent, Documentation                   | Deployment polish  |
 
@@ -272,7 +279,7 @@ This approach minimizes risk, maximizes parallel progress, and ensures tangible 
 | Risk                         | Impact | Probability | Mitigation                                                   |
 | ---------------------------- | ------ | ----------- | ------------------------------------------------------------ |
 | LLM cost overrun             | High   | Medium      | Monitor usage, use low-cost Gemini + caching; fallback to DeepSeek/GLM |
-| YOLO26 accuracy below target | Medium | Medium      | Pre-trained weights + fine-tune on Food-101; early testing   |
+| ViT accuracy below target    | Medium | Medium      | Use fallback model (Google ViT base); allow user correction  |
 | Data quality issues          | Medium | Low         | Verified sources (USDA + Open Food Facts); manual checks     |
 | Integration delays           | High   | Medium      | Modular design + mocks; weekly syncs                         |
 
@@ -290,10 +297,10 @@ All resolved per team discussion (e.g., LLM: Gemini primary; RAG: LangGraph).
 
 - RAG: Retrieval-Augmented Generation
 - Multi-Agent: Collaborative AI agents
-- YOLO26: Latest object detection model
+- ViT: Vision Transformer
 
 ### 11.2 References
 
 - USDA API: [https://fdc.nal.usda.gov/api-guide.html](https://fdc.nal.usda.gov/api-guide.html?referrer=grok.com)
-- YOLO26 Docs: [https://docs.ultralytics.com/models/yolo26/](https://docs.ultralytics.com/models/yolo26/?referrer=grok.com)
+- HuggingFace ViT: [https://huggingface.co/nateraw/food-vit-101](https://huggingface.co/nateraw/food-vit-101)
 - LangGraph: [https://langchain-ai.github.io/langgraph/](https://langchain-ai.github.io/langgraph/?referrer=grok.com)

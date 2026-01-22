@@ -1,8 +1,8 @@
 
 from src.swarm import SwarmOrchestrator, MessageBus
-from health_butler.agents.nutrition_agent import NutritionAgent
-from health_butler.agents.fitness_agent import FitnessAgent
-from health_butler.agents.coordinator_agent import CoordinatorAgent
+from health_butler.agents.nutrition.nutrition_agent import NutritionAgent
+from health_butler.agents.fitness.fitness_agent import FitnessAgent
+from health_butler.coordinator.coordinator_agent import CoordinatorAgent
 
 class HealthSwarmOrchestrator(SwarmOrchestrator):
     """
