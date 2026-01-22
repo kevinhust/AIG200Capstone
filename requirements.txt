@@ -9,7 +9,6 @@ altair
 annotated-types
 anyio
 appdirs==1.4.4
-applaunchservices
 appscript
 archspec
 argon2-cffi
