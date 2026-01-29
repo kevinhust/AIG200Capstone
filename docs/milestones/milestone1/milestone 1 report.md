@@ -35,7 +35,7 @@ Build an **AI-powered Personal Health Butler** that creates a seamless "Snap & A
 *   **Facts**: **USDA FoodData Central** (Foundation Foods).
     *   *Status*: ETL pipeline (`ingest_usda.py`) implemented. JSONs downloaded and cleaned.
 *   **Visuals**: **Food-101 Dataset**.
-    *   *Status*: Used for fine-tuning YOLO26 visuals. Sample images acquired.
+    *   *Status*: Used for fine-tuning ViT visuals.
 
 ### Data Strategy
 *   **Storage**: **ChromaDB / FAISS** for vector embedding of nutrition facts.
@@ -87,7 +87,7 @@ We are following a **Modular Parallel** development strategy.
 | Week | Focus | Key Deliverable | Owner |
 | :--- | :--- | :--- | :--- |
 | **Week 4** | **Core Agents** | `NutritionAgent` (Real ViT/RAG) & `FitnessAgent` operational. | Wangchuk/Kevin |
-| **Week 5** | **Orchestration** | `HealthSwarm` (Coordinator) wiring everything together. | Allen |
+| **Week 5** | **Orchestration** | `HealthSwarm` (Coordinator) wiring everything together. | Allen/Aziz |
 | **Week 6** | **UI & Proto** | Streamlit UI fully connected to Swarm. **Milestone 2 Check-in**. | All |
 
 ### Roles (RACI)

@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  agent:
+    build: .
+    container_name: antigravity-agent
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - AGENT_NAME=ProductionAgent
+      - DEBUG_MODE=true
+    volumes:
+      - ./agent_memory.json:/app/agent_memory.json
+    restart: unless-stopped

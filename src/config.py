@@ -32,7 +32,7 @@ class Settings(BaseSettings):
 
     # Google GenAI Configuration
     GOOGLE_API_KEY: str = ""
-    GEMINI_MODEL_NAME: str = "gemini-2.0-flash-exp"  # Default to latest
+    GEMINI_MODEL_NAME: str = "gemini-2.5-pro"  # Gemini 2.5 Pro for Swarm agents
 
     # Agent Configuration
     AGENT_NAME: str = "AntigravityAgent"
@@ -51,6 +51,15 @@ class Settings(BaseSettings):
         default="gpt-4o-mini",
         description="Default model name for OpenAI-compatible chat completions.",
     )
+
+    # Z.AI Configuration (for Coder/Reviewer)
+    ZAI_BASE_URL: str = Field(default="", description="Base URL for Z.AI API")
+    ZAI_API_KEY: str = Field(default="", description="API key for Z.AI")
+    
+    # xAI Configuration (for Researcher)
+    XAI_BASE_URL: str = Field(default="", description="Base URL for xAI API")
+    XAI_API_KEY: str = Field(default="", description="API key for xAI")
+    XAI_MODEL: str = Field(default="grok-4-1-fast-reasoning", description="Model name for xAI")
 
     # Memory Configuration
     MEMORY_FILE: str = "agent_memory.json"

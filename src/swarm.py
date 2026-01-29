@@ -11,6 +11,7 @@ from src.agents.router_agent import RouterAgent
 from src.agents.coder_agent import CoderAgent
 from src.agents.reviewer_agent import ReviewerAgent
 from src.agents.researcher_agent import ResearcherAgent
+from src.config import settings
 
 
 class MessageBus:
@@ -75,23 +76,55 @@ class SwarmOrchestrator:
     
     def __init__(self):
         """Initialize the swarm with router and worker agents."""
-        print("🪐 Initializing Antigravity Swarm...")
+        print("🪐 Initializing Antigravity Swarm (Hybrid Mode)...")
+        
+        # Prepare API Configurations
+        
+        # Z.AI Config (Primary)
+        zai_config = {
+            "base_url": settings.ZAI_BASE_URL or settings.OPENAI_BASE_URL,
+            "api_key": settings.ZAI_API_KEY or settings.OPENAI_API_KEY,
+            "model": "GLM-4.7"
+        }
+        
+        # xAI Config (Reasoning/Research)
+        xai_config = {
+            "base_url": settings.XAI_BASE_URL,
+            "api_key": settings.XAI_API_KEY,
+            "model": settings.XAI_MODEL or "grok-4-1-fast-reasoning"
+        }
+        
+        print(f"   🤖 Coder/Reviewer: Z.AI ({zai_config['model']})")
+        print(f"   🧠 Researcher: Z.AI ({zai_config['model']})")
         
         # Initialize message bus
         self.message_bus = MessageBus()
         
-        # Initialize router
+        # Initialize router (Using Z.AI for stability/speed)
         print("   🧭 Creating Router agent...")
-        self.router = RouterAgent()
+        self.router = RouterAgent(
+            use_openai_api=True, 
+            api_config=zai_config
+        )
         
-        # Initialize worker agents
+        # Initialize worker agents with specialized models
         print("   💻 Creating Coder agent...")
         print("   🔍 Creating Reviewer agent...")
         print("   📚 Creating Researcher agent...")
+        
         self.workers = {
-            "coder": CoderAgent(),
-            "reviewer": ReviewerAgent(),
-            "researcher": ResearcherAgent()
+            "coder": CoderAgent(
+                use_openai_api=True, 
+                api_config=zai_config
+            ),
+            "reviewer": ReviewerAgent(
+                use_openai_api=True, 
+                api_config=zai_config
+            ),
+            "researcher": ResearcherAgent(
+                use_openai_api=True, 
+                api_config=zai_config
+            )
         }
         
         print(f"✅ Swarm initialized with {len(self.workers)} specialist agents!\n")

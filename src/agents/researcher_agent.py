@@ -15,7 +15,7 @@ class ResearcherAgent(BaseAgent):
     synthesizes findings into actionable insights.
     """
     
-    def __init__(self):
+    def __init__(self, **kwargs):
         system_prompt = """You are the Researcher Agent, a specialist in information gathering and analysis.
 
 Your expertise:
@@ -41,4 +41,4 @@ When researching:
 
 Format your findings clearly for easy understanding."""
         
-        super().__init__(role="researcher", system_prompt=system_prompt)
+        super().__init__(role="researcher", system_prompt=system_prompt, **kwargs)

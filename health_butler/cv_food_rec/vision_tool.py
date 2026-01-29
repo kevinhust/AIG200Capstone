@@ -14,7 +14,7 @@ class VisionTool:
     Phase 2: Integration with HuggingFace ViT (nateraw/food-vit-101).
     """
     
-    def __init__(self, model_name: str = "nateraw/food-vit-101"):
+    def __init__(self, model_name: str = "StatsGary/VIT-food101-image-classifier"):
         self.model_name = model_name
         self._load_model()
     

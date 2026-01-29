@@ -18,7 +18,7 @@ class RouterAgent(BaseAgent):
     the final response from worker outputs.
     """
     
-    def __init__(self):
+    def __init__(self, **kwargs):
         system_prompt = """You are the Router Agent, the coordinator of a multi-agent system.
 
 Your responsibilities:
@@ -39,7 +39,7 @@ DELEGATION:
 
 You may delegate to multiple agents in sequence or parallel."""
         
-        super().__init__(role="router", system_prompt=system_prompt)
+        super().__init__(role="router", system_prompt=system_prompt, **kwargs)
     
     def analyze_and_delegate(self, user_task: str) -> List[Dict[str, str]]:
         """
@@ -59,19 +59,30 @@ You may delegate to multiple agents in sequence or parallel."""
         current_delegation = {}
         
         for line in lines:
+            # Clean up the line: remove markdown list markers
             line = line.strip()
-            if line.startswith('- agent:'):
-                if current_delegation:
+            clean_line = line.lstrip('-').lstrip('*').strip()
+            
+            if clean_line.lower().startswith('agent:'):
+                # If we have a pending delegation that is complete, save it
+                if current_delegation and 'agent' in current_delegation and 'task' in current_delegation:
                     delegations.append(current_delegation)
-                current_delegation = {'agent': line.split(':', 1)[1].strip()}
-            elif line.startswith('- task:') and current_delegation:
-                current_delegation['task'] = line.split(':', 1)[1].strip()
+                # Start new delegation
+                agent_name = clean_line.split(':', 1)[1].strip().lower()
+                # Clean up agent name (remove quotes if any)
+                agent_name = agent_name.strip("'").strip('"')
+                current_delegation = {'agent': agent_name}
+                
+            elif clean_line.lower().startswith('task:') and current_delegation:
+                current_delegation['task'] = clean_line.split(':', 1)[1].strip()
         
-        if current_delegation and 'task' in current_delegation:
+        # Add the last one if complete
+        if current_delegation and 'agent' in current_delegation and 'task' in current_delegation:
             delegations.append(current_delegation)
         
         # Fallback: if no delegations parsed, use simple keyword matching
         if not delegations:
+            # print(f"⚠️ Router parsing failed. Raw response:\n{analysis}") # Debug
             delegations = self._simple_delegate(user_task)
         
         return delegations

@@ -15,7 +15,7 @@ class ReviewerAgent(BaseAgent):
     issues, and adherence to best practices.
     """
     
-    def __init__(self):
+    def __init__(self, **kwargs):
         system_prompt = """You are the Reviewer Agent, a specialist in code quality and security.
 
 Your expertise:
@@ -40,4 +40,4 @@ Provide constructive feedback with:
 
 Be thorough but constructive."""
         
-        super().__init__(role="reviewer", system_prompt=system_prompt)
+        super().__init__(role="reviewer", system_prompt=system_prompt, **kwargs)
