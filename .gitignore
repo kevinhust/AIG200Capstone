@@ -84,3 +84,4 @@ coverage.xml
 
 # Archive
 archive/
+.venv/
