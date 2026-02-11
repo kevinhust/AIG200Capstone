@@ -60,18 +60,18 @@ def download_usda_sample():
     ]
     
     output_file = DATA_RAW_DIR / "usda_sample.json"
-    with open(output_file, 'w') as f:
+    with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(sample_data, f, indent=2)
     
-    logger.info(f"✅ Created synthetic USDA sample at {output_file}")
+    logger.info("✅ Created synthetic USDA sample at %s", output_file)
     return output_file
 
 def process_and_index():
     ensure_dirs()
     raw_file = download_usda_sample()
     
-    logger.info(f"Processing {raw_file}...")
-    with open(raw_file, 'r') as f:
+    logger.info("Processing %s...", raw_file)
+    with open(raw_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
     rag_docs = []
@@ -115,21 +115,21 @@ def process_and_index():
     
     # Save processed JSON for reference
     output_file = DATA_PROCESSED_DIR / "usda_chunks.json"
-    with open(output_file, 'w') as f:
+    with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(rag_docs, f, indent=2)
-    logger.info(f"✅ Processed {len(rag_docs)} items saved to {output_file}")
+    logger.info("✅ Processed %d items saved to %s", len(rag_docs), output_file)
 
     # Index into ChromaDB
     logger.info("Indexing to ChromaDB...")
     try:
         rag_tool = RagTool()
         if rag_tool.collection.count() > 0:
-             logger.info("Collection already has data. Skipping re-indexing for MVP speed.")
+            logger.info("Collection already has data. Skipping re-indexing for MVP speed.")
         else:
-             rag_tool.add_documents(rag_docs)
-             logger.info("✅ Indexing Complete.")
+            rag_tool.add_documents(rag_docs)
+            logger.info("✅ Indexing Complete.")
     except Exception as e:
-        logger.error(f"Failed to index to ChromaDB: {e}")
+        logger.error("Failed to index to ChromaDB: %s", e)
 
 if __name__ == "__main__":
     process_and_index()

@@ -1,0 +1,4781 @@
+[
+  {
+    "query": "almonds",
+    "fdcId": 2074342,
+    "description": "ALMONDS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 23.3,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 56.7,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 13.3,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 633,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 3.33,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 10.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 367,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "apple",
+    "fdcId": 454004,
+    "description": "APPLE",
+    "dataType": "Branded",
+    "nutrients": {
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      },
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 14.3,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 52.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 10.4,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 3.2,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.65,
+        "unit": "G"
+      }
+    }
+  },
+  {
+    "query": "apple juice",
+    "fdcId": 2103028,
+    "description": "APPLE JUICE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 12.5,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 50.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 12.5,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 12.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "artichoke",
+    "fdcId": 2709766,
+    "description": "Artichoke",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 2.89,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.34,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 11.95,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 53,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.99,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 5.7,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 60,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "asparagus",
+    "fdcId": 2390911,
+    "description": "ASPARAGUS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 2.35,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 3.53,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 18.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 2.35,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.4,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "avocado",
+    "fdcId": 2710208,
+    "description": "Avocado dressing",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 1.9,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 43.33,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 7.36,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 427,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 6.67,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.1,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 867,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "bacon",
+    "fdcId": 2128991,
+    "description": "BACON",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 33.3,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 46.7,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 600,
+        "unit": "KCAL"
+      },
+      "sodium": {
+        "value": 1800.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "bagel",
+    "fdcId": 2707684,
+    "description": "Bagel",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 10.56,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 1.32,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 52.38,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 264,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 8.43,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 1.6,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 422,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "banana",
+    "fdcId": 2012128,
+    "description": "BANANA",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 12.5,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 6.25,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 40.6,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 312,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 6.25,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 6.2,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 594,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "barbecue sauce",
+    "fdcId": 2709750,
+    "description": "Barbecue sauce",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 0.82,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.63,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 40.77,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 172,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 33.24,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.9,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 1027,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "beef steak",
+    "fdcId": 2034190,
+    "description": "BEEF STEAK",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 42.9,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 7.14,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 214,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 2750.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "beer",
+    "fdcId": 2710616,
+    "description": "Beer",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 0.46,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 3.55,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 43,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 4,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "beet",
+    "fdcId": 2710071,
+    "description": "Beets, pickled",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 0.8,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.08,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 16.28,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 65,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 11.05,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.8,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 149,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "bell pepper",
+    "fdcId": 2258588,
+    "description": "Peppers, bell, green, raw",
+    "dataType": "Foundation",
+    "nutrients": {
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      },
+      "fat": {
+        "value": 0.106,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.942,
+        "unit": "G"
+      },
+      "protein": {
+        "value": 0.715,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 4.78,
+        "unit": "G"
+      }
+    }
+  },
+  {
+    "query": "black beans",
+    "fdcId": 2128757,
+    "description": "BLACK BEANS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 8.24,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.59,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 23.5,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 141,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 1.18,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 8.2,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 12.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "blackberry",
+    "fdcId": 454155,
+    "description": "BLACKBERRY",
+    "dataType": "Branded",
+    "nutrients": {
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      },
+      "protein": {
+        "value": 0.58,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.29,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 4.96,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 25.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 1.45,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 1.7,
+        "unit": "G"
+      }
+    }
+  },
+  {
+    "query": "blueberry",
+    "fdcId": 2116605,
+    "description": "BLUEBERRY",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 65.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 250,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 60.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "bread",
+    "fdcId": 2058078,
+    "description": "BREAD",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 32.1,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 146,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 3.6,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 354,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "broccoli",
+    "fdcId": 2549992,
+    "description": "BROCCOLI",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 2.35,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 4.71,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 24.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 1.18,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 3.5,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 24.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "brown rice",
+    "fdcId": 2431690,
+    "description": "BROWN RICE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 7.14,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 76.2,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 357,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 4.8,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "brussels sprouts",
+    "fdcId": 1905344,
+    "description": "BRUSSELS SPROUTS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 3.53,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.35,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 9.41,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 41.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 2.35,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 3.5,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 24.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "butter",
+    "fdcId": 2542726,
+    "description": "BUTTER",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 78.6,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 714,
+        "unit": "KCAL"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "cabbage",
+    "fdcId": 170392,
+    "description": "Cabbage, kimchi",
+    "dataType": "SR Legacy",
+    "nutrients": {
+      "fat": {
+        "value": 0.5,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 2.4,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 65.0,
+        "unit": "kJ"
+      },
+      "sugar": {
+        "value": 1.06,
+        "unit": "G"
+      },
+      "protein": {
+        "value": 1.1,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 1.6,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 498,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "candy",
+    "fdcId": 384901,
+    "description": "CANDY",
+    "dataType": "Branded",
+    "nutrients": {
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "protein": {
+        "value": 2.5,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 7.5,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 80.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 375,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 47.5,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 300,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "cantaloupe",
+    "fdcId": 1568209,
+    "description": "CANTALOUPE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.75,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 8.96,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 37.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 8.21,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.7,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 19.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "carrot",
+    "fdcId": 2709660,
+    "description": "Carrots, raw",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 0.87,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.24,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 9.68,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 44,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 4.75,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.9,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 75,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "cauliflower",
+    "fdcId": 2409200,
+    "description": "CAULIFLOWER",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 2.35,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 4.71,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 24.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 2.35,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.4,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 24.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "celery",
+    "fdcId": 447185,
+    "description": "CELERY",
+    "dataType": "Branded",
+    "nutrients": {
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 3.64,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 14.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 1.82,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 1.8,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 105,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "cereal",
+    "fdcId": 2617421,
+    "description": "CEREAL",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 5.56,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 4.17,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 86.1,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 389,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 33.3,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 5.6,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 417,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "cheddar cheese",
+    "fdcId": 2057648,
+    "description": "CHEDDAR CHEESE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 21.4,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 28.6,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 393,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 679,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "cheese",
+    "fdcId": 1943515,
+    "description": "CHEESE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 21.1,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 24.6,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 2.46,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 331,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 599,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "cherry",
+    "fdcId": 2135570,
+    "description": "CHERRY",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 4.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 20.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 42.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 360,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 18.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 200,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "chicken breast",
+    "fdcId": 2187885,
+    "description": "CHICKEN BREAST",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 20.4,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 8.1,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 1.06,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 165,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.7,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 433,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "chicken thigh",
+    "fdcId": 1899680,
+    "description": "CHICKEN THIGH",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 14.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 16.7,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0.88,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 193,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.88,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 66.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "chickpeas",
+    "fdcId": 2068232,
+    "description": "CHICKPEAS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 8.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 1.6,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 20.8,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 128,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.8,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 4.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 232,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "chips",
+    "fdcId": 2381644,
+    "description": "CHIPS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 7.05,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 17.6,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 77.6,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 494,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 35.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "chocolate",
+    "fdcId": 2678517,
+    "description": "CHOCOLATE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 2.94,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 44.1,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 47.1,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 618,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 47.1,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.9,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 29.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "coconut",
+    "fdcId": 2167906,
+    "description": "COCONUT",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 35.7,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 46.4,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 500,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 42.9,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 3.6,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 261,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "cod",
+    "fdcId": 2099857,
+    "description": "COD",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 12.4,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 2.94,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 5.29,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 100,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.6,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 418,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "coffee",
+    "fdcId": 2091869,
+    "description": "COFFEE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 2.38,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 23.8,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 21.4,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 310,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 19.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 101,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "cookies",
+    "fdcId": 2042488,
+    "description": "COOKIES",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 10.7,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 53.6,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 321,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 25.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 196,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "corn",
+    "fdcId": 2122593,
+    "description": "CORN",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.8,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 12.8,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 56.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 6.4,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.8,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 240,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "cottage cheese",
+    "fdcId": 2287080,
+    "description": "COTTAGE CHEESE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 11.5,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 4.42,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 3.54,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 106,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 3.54,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 434,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "couscous",
+    "fdcId": 2388834,
+    "description": "COUSCOUS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 13.3,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 77.8,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 378,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 2.22,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 4.4,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "crab",
+    "fdcId": 2706344,
+    "description": "Crab",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 17.88,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.74,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 83,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 395,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "crackers",
+    "fdcId": 2055557,
+    "description": "CRACKERS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 7.19,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 21.6,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 57.6,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 468,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 3.6,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 935,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "cream",
+    "fdcId": 170857,
+    "description": "Cream, fluid, light (coffee cream or table cream)",
+    "dataType": "SR Legacy",
+    "nutrients": {
+      "protein": {
+        "value": 2.96,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 72.0,
+        "unit": "MG"
+      },
+      "fat": {
+        "value": 19.1,
+        "unit": "G"
+      },
+      "sugar": {
+        "value": 3.67,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 3.66,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 815,
+        "unit": "kJ"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      }
+    }
+  },
+  {
+    "query": "cream cheese",
+    "fdcId": 2126583,
+    "description": "CREAM CHEESE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 7.14,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 32.1,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 7.14,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 321,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 339,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "croissant",
+    "fdcId": 2707678,
+    "description": "Croissant",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 8.2,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 21,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 45.8,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 406,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 11.26,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.6,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 300,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "cucumber",
+    "fdcId": 2709821,
+    "description": "Cucumber salad made with cucumber and vinegar",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 0.5,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.13,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 6.79,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 34,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 5.33,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.5,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 236,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "dried fruit",
+    "fdcId": 2709195,
+    "description": "Dried, fruit, NFS",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 2.28,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.62,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 78.62,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 298,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 66.33,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 4.8,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 32,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "egg",
+    "fdcId": 2575290,
+    "description": "EGG",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 6.41,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 28.8,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 57.7,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 513,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 54.5,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 3.2,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 176,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "eggplant",
+    "fdcId": 2710049,
+    "description": "Eggplant dip",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 4.8,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 14.98,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 8.15,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 183,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 2.81,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 3.9,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 209,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "garlic",
+    "fdcId": 1662203,
+    "description": "GARLIC",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 33.3,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 167,
+        "unit": "KCAL"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "granola",
+    "fdcId": 565809,
+    "description": "GRANOLA",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 14.3,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 28.6,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 46.4,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 464,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 17.9,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 7.1,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 89.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "granola bar",
+    "fdcId": 522183,
+    "description": "GRANOLA BAR",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 10.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 20.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 20.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 300,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 5.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 5.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 5.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "grape",
+    "fdcId": 2085879,
+    "description": "GRAPE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 13.2,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 54.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 13.2,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 3.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "grapefruit",
+    "fdcId": 1930383,
+    "description": "GRAPEFRUIT",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 10.8,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 45.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 9.91,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "greek yogurt",
+    "fdcId": 2035482,
+    "description": "GREEK YOGURT",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 3.33,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 20.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 70.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 467,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 70.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 3.3,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 33.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "green beans",
+    "fdcId": 2058991,
+    "description": "GREEN BEANS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 2.35,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 7.06,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 29.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 3.53,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.4,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 6.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "ground beef",
+    "fdcId": 1942314,
+    "description": "GROUND BEEF",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 17.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 26.8,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 312,
+        "unit": "KCAL"
+      },
+      "sodium": {
+        "value": 67.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "ham",
+    "fdcId": 2705878,
+    "description": "Ham",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 19.04,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 3.87,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 1.58,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 117,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 1.54,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 1149,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "honey",
+    "fdcId": 169640,
+    "description": "Honey",
+    "dataType": "SR Legacy",
+    "nutrients": {
+      "protein": {
+        "value": 0.3,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.2,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 4.0,
+        "unit": "MG"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 82.4,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 1270.0,
+        "unit": "kJ"
+      },
+      "sugar": {
+        "value": 82.1,
+        "unit": "G"
+      }
+    }
+  },
+  {
+    "query": "honeydew melon",
+    "fdcId": 2709241,
+    "description": "Honeydew melon, raw",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 0.54,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.14,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 9.09,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 36,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 8.12,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.8,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 18,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "hot sauce",
+    "fdcId": 2069746,
+    "description": "HOT SAUCE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 0.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 5330.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "ice cream",
+    "fdcId": 2100807,
+    "description": "ICE CREAM",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 3.08,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 10.8,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 24.6,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 200,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 21.5,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 54.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "jam",
+    "fdcId": 2710301,
+    "description": "Jam",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 0.37,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.07,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 68.86,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 278,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 48.5,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 1.1,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 32,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "kale",
+    "fdcId": 2391372,
+    "description": "KALE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 4.71,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 1.18,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 8.24,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 47.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 2.35,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 3.5,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 35.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "ketchup",
+    "fdcId": 2709733,
+    "description": "Ketchup",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 1.08,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.32,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 27.1,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 109,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 21.54,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.3,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 928,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "kidney beans",
+    "fdcId": 2108502,
+    "description": "KIDNEY BEANS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 7.69,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.38,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 12.3,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 100,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.77,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 6.2,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 96.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "kiwi",
+    "fdcId": 1662236,
+    "description": "KIWI",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 1.35,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.68,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 14.9,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 61.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 8.78,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.7,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "lamb chop",
+    "fdcId": 2705906,
+    "description": "Lamb, chop",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 27.36,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 16.27,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 264,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 387,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "lemon",
+    "fdcId": 2038425,
+    "description": "LEMON",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 30.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 6.67,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 300,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 3.33,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 800,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "lentils",
+    "fdcId": 2431290,
+    "description": "LENTILS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 22.9,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 2.08,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 62.5,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 292,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 20.8,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 10.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "lettuce",
+    "fdcId": 2709789,
+    "description": "Lettuce, raw",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 0.92,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.1,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 3.69,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 20,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 1.1,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 1.3,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 23,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "lime",
+    "fdcId": 2709306,
+    "description": "Lime souffle",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 8.82,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 15.02,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 39.83,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 328,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 37.32,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.8,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 79,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "lobster",
+    "fdcId": 2706349,
+    "description": "Lobster",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 20.91,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.95,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 97,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 535,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "mango",
+    "fdcId": 2680464,
+    "description": "MANGO",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 2.5,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 85.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 350,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 60.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 5.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "maple syrup",
+    "fdcId": 493490,
+    "description": "MAPLE SYRUP",
+    "dataType": "Branded",
+    "nutrients": {
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 86.7,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 333,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 86.7,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 2.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "mayonnaise",
+    "fdcId": 2403612,
+    "description": "MAYONNAISE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 77.8,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 667,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 611,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "milk",
+    "fdcId": 1909132,
+    "description": "MILK",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 3.39,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 2.12,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 5.08,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 55.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 5.08,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 55.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "mozzarella",
+    "fdcId": 1948692,
+    "description": "MOZZARELLA",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 21.4,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 25.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 321,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 179,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "muffin",
+    "fdcId": 454462,
+    "description": "MUFFIN",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 3.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 3.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 33.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 220,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 19.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 160,
+        "unit": "MG"
+      },
+      "fiber": {
+        "value": 1.0,
+        "unit": "G"
+      }
+    }
+  },
+  {
+    "query": "mushroom",
+    "fdcId": 2310033,
+    "description": "MUSHROOM",
+    "dataType": "Branded",
+    "nutrients": {
+      "fiber": {
+        "value": 0.9,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 5.31,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 6.19,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 80.0,
+        "unit": "KCAL"
+      },
+      "sodium": {
+        "value": 363,
+        "unit": "MG"
+      },
+      "protein": {
+        "value": 0.88,
+        "unit": "G"
+      }
+    }
+  },
+  {
+    "query": "mustard",
+    "fdcId": 2710085,
+    "description": "Mustard",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 4.25,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 3.38,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 5.3,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 69,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 1.42,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 4.3,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 1100,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "noodles",
+    "fdcId": 2017319,
+    "description": "NOODLES",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 11.1,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 1.85,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 77.8,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 370,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 1.85,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 3.7,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 352,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "nuts",
+    "fdcId": 2671477,
+    "description": "NUTS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 20.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 26.7,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 30.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 400,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 16.7,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 6.7,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 17.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "oatmeal",
+    "fdcId": 1995469,
+    "description": "OATMEAL",
+    "dataType": "Branded",
+    "nutrients": {
+      "fat": {
+        "value": 6.67,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 66.7,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 1580.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 8.9,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 11.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "olive oil",
+    "fdcId": 2710186,
+    "description": "Olive oil",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 100,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 900,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 2,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "onion",
+    "fdcId": 2438059,
+    "description": "ONION",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 10.9,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.78,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 59.4,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 289,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 7.03,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.3,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 430,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "orange",
+    "fdcId": 1864680,
+    "description": "ORANGE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 4.76,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 90.5,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 381,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 90.5,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 381,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "orange juice",
+    "fdcId": 2073232,
+    "description": "ORANGE JUICE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.83,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 10.8,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 46.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 9.17,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "parmesan cheese",
+    "fdcId": 2096212,
+    "description": "PARMESAN CHEESE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 40.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 30.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 400,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 2000.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "pasta",
+    "fdcId": 465736,
+    "description": "PASTA",
+    "dataType": "Branded",
+    "nutrients": {
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      },
+      "protein": {
+        "value": 12.5,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 1.79,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 78.6,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 375,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 3.6,
+        "unit": "G"
+      }
+    }
+  },
+  {
+    "query": "peach",
+    "fdcId": 2053614,
+    "description": "PEACH",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 4.44,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 22.2,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 53.3,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 411,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 28.9,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.2,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 344,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "peanut butter",
+    "fdcId": 2707537,
+    "description": "Peanut butter",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 22.21,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 51.36,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 22.31,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 598,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 10.49,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 5,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 426,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "peanuts",
+    "fdcId": 2655605,
+    "description": "PEANUTS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 25.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 39.3,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 32.1,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 571,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 10.7,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 1390.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "pear",
+    "fdcId": 2709254,
+    "description": "Pear, raw",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 0.37,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.15,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 15.18,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 59,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 9.73,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 3.1,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 3,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "peas",
+    "fdcId": 2030118,
+    "description": "PEAS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 3.2,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.4,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 9.6,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 56.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 4.8,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.4,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 240,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "pineapple",
+    "fdcId": 2282543,
+    "description": "PINEAPPLE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 78.6,
+        "unit": "G"
+      },
+      "sugar": {
+        "value": 64.3,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 4.3,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 18.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "popcorn",
+    "fdcId": 2430295,
+    "description": "POPCORN",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 8.7,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 21.7,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 43.5,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 478,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 8.7,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 783,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "pork chop",
+    "fdcId": 2705872,
+    "description": "Pork, chop, stuffed",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 18.37,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 9.04,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 7.82,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 190,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 1,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 414,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "potato",
+    "fdcId": 2709510,
+    "description": "Potato patty",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 3.89,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 11.32,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 13.49,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 171,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 1.48,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 1.5,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 219,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "pretzels",
+    "fdcId": 2384566,
+    "description": "PRETZELS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 10.7,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 1.79,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 82.1,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 393,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 7.1,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 1710.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "protein shake",
+    "fdcId": 587398,
+    "description": "PROTEIN SHAKE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 5.63,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 2.25,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 3.1,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 56.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 2.54,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 73.0,
+        "unit": "MG"
+      },
+      "fiber": {
+        "value": 0.3,
+        "unit": "G"
+      }
+    }
+  },
+  {
+    "query": "quinoa",
+    "fdcId": 386410,
+    "description": "QUINOA",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 10.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 4.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 70.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 360,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 2.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 6.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 620,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "radish",
+    "fdcId": 2709803,
+    "description": "Radish",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 0.68,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.1,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 3.4,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 16,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 1.86,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 1.6,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 39,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "ranch dressing",
+    "fdcId": 2710212,
+    "description": "Ranch dressing",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 1.32,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 44.54,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 5.9,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 430,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 4.69,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 810,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "raspberry",
+    "fdcId": 2163278,
+    "description": "RASPBERRY",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 66.7,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 222,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 61.1,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "salmon fillet",
+    "fdcId": 1923159,
+    "description": "SALMON FILLET",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 22.1,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 7.08,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 150,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 62.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "salsa",
+    "fdcId": 2374528,
+    "description": "SALSA",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 7.14,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 54.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 821,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "shrimp",
+    "fdcId": 1899566,
+    "description": "SHRIMP",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 11.8,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 47.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 494,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "smoothie",
+    "fdcId": 2710152,
+    "description": "Vegetable smoothie",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 2.75,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 6.63,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 5.84,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 89,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 2.57,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.8,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 38,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "soda",
+    "fdcId": 422335,
+    "description": "SODA",
+    "dataType": "Branded",
+    "nutrients": {
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 6.76,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 25.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 6.76,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 15.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "sour cream",
+    "fdcId": 2617240,
+    "description": "SOUR CREAM",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 3.33,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 16.7,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 6.67,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 200,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 3.33,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 167,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "soy sauce",
+    "fdcId": 2707442,
+    "description": "Soy sauce",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 8.14,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.57,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 4.93,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 53,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.4,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.8,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 5493,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "spinach",
+    "fdcId": 2099349,
+    "description": "SPINACH",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 1.67,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 3.33,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 21.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 1.7,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 300,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "strawberry",
+    "fdcId": 2442262,
+    "description": "STRAWBERRY",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.85,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 21.2,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 85.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 17.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "sweet potato",
+    "fdcId": 477475,
+    "description": "SWEET POTATO",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 5.45,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 1.28,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 16.4,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 106,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 4.17,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 1.9,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 173,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "tea",
+    "fdcId": 540031,
+    "description": "TEA",
+    "dataType": "Branded",
+    "nutrients": {
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "protein": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 8.46,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 34.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 8.25,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 2.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "tempeh",
+    "fdcId": 174272,
+    "description": "Tempeh",
+    "dataType": "SR Legacy",
+    "nutrients": {
+      "protein": {
+        "value": 20.3,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 192,
+        "unit": "KCAL"
+      },
+      "carbs": {
+        "value": 7.64,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 9.0,
+        "unit": "MG"
+      },
+      "fat": {
+        "value": 10.8,
+        "unit": "G"
+      }
+    }
+  },
+  {
+    "query": "tilapia",
+    "fdcId": 2016165,
+    "description": "TILAPIA",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 18.8,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 3.57,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 1.79,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 116,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 446,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "tofu",
+    "fdcId": 2294522,
+    "description": "TOFU",
+    "dataType": "Branded",
+    "nutrients": {
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      }
+    }
+  },
+  {
+    "query": "tomato",
+    "fdcId": 2293024,
+    "description": "TOMATO",
+    "dataType": "Branded",
+    "nutrients": {}
+  },
+  {
+    "query": "tortilla",
+    "fdcId": 2095061,
+    "description": "TORTILLA",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 5.26,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 2.63,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 44.7,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 211,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 5.3,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 39.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "trail mix",
+    "fdcId": 1903647,
+    "description": "TRAIL MIX",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 14.3,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 28.6,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 46.4,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 511,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 28.6,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 6.1,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 168,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "tuna",
+    "fdcId": 2068771,
+    "description": "TUNA",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 5.66,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 3.77,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 10.4,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 94.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 5.66,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.9,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 443,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "turkey breast",
+    "fdcId": 2440897,
+    "description": "TURKEY BREAST",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 28.1,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.88,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 123,
+        "unit": "KCAL"
+      },
+      "sodium": {
+        "value": 53.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "vinegar",
+    "fdcId": 2709351,
+    "description": "Vinegar",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 0,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 0.93,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 21,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.4,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 5,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "walnuts",
+    "fdcId": 2431413,
+    "description": "WALNUTS",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 15.6,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 65.6,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 12.5,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 656,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 3.12,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 6.2,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "watermelon",
+    "fdcId": 2104697,
+    "description": "WATERMELON",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 0.78,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.25,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 7.45,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 31.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 6.27,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0.4,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "whipped cream",
+    "fdcId": 2705598,
+    "description": "Cream, whipped",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 1.9,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 33.45,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 9.49,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 346,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 8.55,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 20,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "white rice",
+    "fdcId": 2488703,
+    "description": "WHITE RICE",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 6.67,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 80.0,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 356,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.2,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "whole wheat bread",
+    "fdcId": 2286812,
+    "description": "WHOLE WHEAT BREAD",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 11.6,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 2.33,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 44.2,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 233,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 6.98,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 7.0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 395,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "wine",
+    "fdcId": 2710697,
+    "description": "Wine spritzer",
+    "dataType": "Survey (FNDDS)",
+    "nutrients": {
+      "protein": {
+        "value": 0.04,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 1.62,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 49,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 0.47,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 0,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 11,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "yogurt",
+    "fdcId": 463067,
+    "description": "YOGURT",
+    "dataType": "Branded",
+    "nutrients": {
+      "fiber": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "protein": {
+        "value": 2.94,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 2.94,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 15.9,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 94.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 15.9,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 41.0,
+        "unit": "MG"
+      }
+    }
+  },
+  {
+    "query": "zucchini",
+    "fdcId": 2428955,
+    "description": "ZUCCHINI",
+    "dataType": "Branded",
+    "nutrients": {
+      "protein": {
+        "value": 1.05,
+        "unit": "G"
+      },
+      "fat": {
+        "value": 0.0,
+        "unit": "G"
+      },
+      "carbs": {
+        "value": 4.21,
+        "unit": "G"
+      },
+      "calories": {
+        "value": 21.0,
+        "unit": "KCAL"
+      },
+      "sugar": {
+        "value": 3.16,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 1.1,
+        "unit": "G"
+      },
+      "sodium": {
+        "value": 0.0,
+        "unit": "MG"
+      }
+    }
+  }
+]

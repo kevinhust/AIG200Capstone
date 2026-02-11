@@ -15,7 +15,7 @@ class CoderAgent(BaseAgent):
     proper documentation and type hints.
     """
     
-    def __init__(self):
+    def __init__(self, **kwargs):
         system_prompt = """You are the Coder Agent, a specialist in software development.
 
 Your expertise:
@@ -34,4 +34,4 @@ Your responses should:
 
 When given a coding task, implement it thoroughly and explain your approach."""
         
-        super().__init__(role="coder", system_prompt=system_prompt)
+        super().__init__(role="coder", system_prompt=system_prompt, **kwargs)
