@@ -5,9 +5,11 @@ Implements a specialized Multi-Agent Swarm for the Personal Health Butler AI.
 Uses the Router-Worker pattern with Coordinator, Nutrition, and Fitness agents.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable
 from datetime import datetime
 import logging
+import time
+import requests
 
 from health_butler.coordinator.coordinator_agent import CoordinatorAgent
 from health_butler.agents.nutrition.nutrition_agent import NutritionAgent
@@ -15,6 +17,50 @@ from health_butler.agents.fitness.fitness_agent import FitnessAgent
 
 # Setup logging
 logger = logging.getLogger(__name__)
+
+
+def retry_with_exponential_backoff(
+    max_retries: int = 3,
+    initial_delay: float = 1.0,
+    backoff_factor: float = 2.0,
+    exceptions: tuple = (Exception,)
+) -> Callable:
+    """
+    Decorator for retrying function calls with exponential backoff.
+
+    Args:
+        max_retries: Maximum number of retry attempts.
+        initial_delay: Initial delay in seconds before first retry.
+        backoff_factor: Multiplier for delay after each retry.
+        exceptions: Tuple of exception types to catch and retry.
+
+    Returns:
+        Decorated function that retries on failure.
+    """
+    def decorator(func: Callable) -> Callable:
+        def wrapper(*args, **kwargs) -> Any:
+            delay = initial_delay
+            last_exception = None
+
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    if attempt < max_retries:
+                        logger.warning(
+                            "Attempt %d/%d failed: %s. Retrying in %.1fs...",
+                            attempt + 1, max_retries + 1, str(e), delay
+                        )
+                        time.sleep(delay)
+                        delay *= backoff_factor
+                    else:
+                        logger.error("All %d attempts failed: %s", max_retries + 1, str(e))
+
+            raise last_exception
+
+        return wrapper
+    return decorator
 
 
 class MessageBus:
@@ -47,7 +93,7 @@ class MessageBus:
             "timestamp": datetime.now().isoformat()
         }
         self.messages.append(message)
-        logger.info(f"[MessageBus] {from_agent} → {to_agent}: {message_type}")
+        logger.info("[MessageBus] %s → %s: %s", from_agent, to_agent, message_type)
     
     def get_context_for(self, agent_name: str) -> List[Dict[str, Any]]:
         """
@@ -129,100 +175,17 @@ class HealthSwarm:
     ) -> Dict[str, Any]:
         """
         Execute a user request using the Health Swarm.
-        
-        Args:
-            user_input: The text input from the user.
-            image_path: Optional path to an uploaded image.
-            user_context: Optional user preferences/goals.
-            
-        Returns:
-            Dict containing:
-                - response: Final synthesized response
-                - delegations: List of agent delegations made
-                - agent_outputs: Individual agent results
-                - message_log: Complete message bus log
         """
-        self._log(f"\n{'='*70}")
-        self._log(f"🎯 User Request: {user_input}")
-        if image_path:
-            self._log(f"   📷 Image: {image_path}")
-        self._log("="*70)
+        self._init_execution(user_input, image_path)
         
-        # Clear message bus for new request
-        self.message_bus.clear()
+        # Step 1: Plan
+        delegations = self._plan_delegations(user_input)
         
-        # Record user input
-        self.message_bus.send("user", "coordinator", "task", user_input)
+        # Step 2: Execute
+        agent_outputs = self._execute_delegations(delegations, image_path, user_context)
         
-        # Step 1: Coordinator analyzes and creates delegation plan
-        self._log("\n🧭 [Coordinator] Analyzing request and creating delegation plan...")
-        self.message_bus.send("coordinator", "system", "status", "Analyzing user intent...")
-        
-        delegations = self.coordinator.analyze_and_delegate(user_input)
-        
-        self._log(f"   📋 Delegation plan: {len(delegations)} step(s)")
-        for i, d in enumerate(delegations, 1):
-            self._log(f"      {i}. {d['agent'].capitalize()} → {d['task'][:50]}...")
-        
-        # Step 2: Execute delegations sequentially
-        agent_outputs: List[Dict[str, Any]] = []
-        
-        for i, delegation in enumerate(delegations, 1):
-            agent_name = delegation['agent']
-            agent_task = delegation['task']
-            
-            self._log(f"\n{'─'*70}")
-            self._log(f"📤 [Coordinator → {agent_name.capitalize()}] Task {i}/{len(delegations)}")
-            self.message_bus.send("coordinator", "system", "status", f"Routing to {agent_name.capitalize()} Agent...")
-            
-            # Record delegation
-            self.message_bus.send("coordinator", agent_name, "task", agent_task)
-            
-            # Get worker agent
-            worker = self.workers.get(agent_name)
-            if not worker:
-                error_msg = f"Unknown agent: {agent_name}"
-                logger.error(error_msg)
-                agent_outputs.append({"agent": agent_name, "result": error_msg, "error": True})
-                continue
-            
-            # Build context for the worker
-            context = self._build_agent_context(agent_name, image_path, user_context, agent_outputs)
-            
-            # Execute task
-            self._log(f"\n🔧 [{agent_name.capitalize()}] Executing...")
-            self.message_bus.send(agent_name, "system", "status", f"{agent_name.capitalize()} Agent working...")
-            
-            try:
-                result = worker.execute(agent_task, context)
-                agent_outputs.append({
-                    "agent": agent_name,
-                    "task": agent_task,
-                    "result": result,
-                    "error": False
-                })
-                self._log(f"✅ [{agent_name.capitalize()}] Complete!")
-                self._log(f"   Preview: {result[:150]}..." if len(result) > 150 else f"   Result: {result}")
-                
-            except Exception as e:
-                error_msg = f"Error: {str(e)}"
-                logger.error(f"[{agent_name}] {error_msg}")
-                agent_outputs.append({
-                    "agent": agent_name,
-                    "task": agent_task,
-                    "result": error_msg,
-                    "error": True
-                })
-            
-            # Record result
-            self.message_bus.send(agent_name, "coordinator", "result", agent_outputs[-1]["result"])
-        
-        # Step 3: Coordinator synthesizes final response
-        self._log(f"\n{'─'*70}")
-        self._log("🧭 [Coordinator] Synthesizing final response...")
-        self.message_bus.send("coordinator", "system", "status", "Preparing final response...")
-        
-        final_response = self._synthesize_results(delegations, agent_outputs)
+        # Step 3: Synthesize
+        final_response = self._synthesize_analysis(delegations, agent_outputs)
         
         self.message_bus.send("coordinator", "user", "result", final_response)
         
@@ -235,6 +198,143 @@ class HealthSwarm:
             "agent_outputs": agent_outputs,
             "message_log": self.message_bus.get_all_messages()
         }
+
+    def _init_execution(self, user_input: str, image_path: Optional[str]):
+        """Initialize logging and message bus for new execution."""
+        self._log(f"\n{'='*70}")
+        self._log(f"🎯 User Request: {user_input}")
+        if image_path:
+            self._log(f"   📷 Image: {image_path}")
+        self._log("="*70)
+        
+        self.message_bus.clear()
+        self.message_bus.send("user", "coordinator", "task", user_input)
+
+    def _plan_delegations(self, user_input: str) -> List[Dict[str, str]]:
+        """Step 1: Use Coordinator to analyze intent and create plan."""
+        self._log("\n🧭 [Coordinator] Analyzing request and creating delegation plan...")
+        self.message_bus.send("coordinator", "system", "status", "Analyzing user intent...")
+        
+        delegations = self.coordinator.analyze_and_delegate(user_input)
+        
+        self._log(f"   📋 Delegation plan: {len(delegations)} step(s)")
+        for i, d in enumerate(delegations, 1):
+            self._log(f"      {i}. {d['agent'].capitalize()} → {d['task'][:50]}...")
+            
+        return delegations
+
+    def _execute_delegations(
+        self, 
+        delegations: List[Dict[str, str]], 
+        image_path: Optional[str], 
+        user_context: Optional[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Step 2: Execute the plan sequentially."""
+        agent_outputs: List[Dict[str, Any]] = []
+        
+        for i, delegation in enumerate(delegations, 1):
+            agent_name = delegation['agent']
+            agent_task = delegation['task']
+            
+            self._log(f"\n{'─'*70}")
+            self._log(f"📤 [Coordinator → {agent_name.capitalize()}] Task {i}/{len(delegations)}")
+            self.message_bus.send("coordinator", "system", "status", f"Routing to {agent_name.capitalize()} Agent...")
+            self.message_bus.send("coordinator", agent_name, "task", agent_task)
+            
+            result_data = self._execute_single_worker(agent_name, agent_task, image_path, user_context, agent_outputs)
+            agent_outputs.append(result_data)
+            
+            # Record result in bus
+            if not result_data['error']:
+                self.message_bus.send(agent_name, "coordinator", "result", result_data['result'])
+                
+        return agent_outputs
+
+    @retry_with_exponential_backoff(
+        max_retries=3,
+        initial_delay=1.0,
+        backoff_factor=2.0,
+        exceptions=(requests.RequestException, ConnectionError, TimeoutError)
+    )
+    def _execute_with_retry(self, worker: Any, task: str, context: List[Dict[str, str]]) -> str:
+        """
+        Execute worker task with retry logic for API failures.
+
+        Wrapped by retry decorator for handling:
+        - requests.RequestException (OpenAI API network errors)
+        - ConnectionError (network connectivity issues)
+        - TimeoutError (API timeouts)
+
+        Args:
+            worker: The worker agent instance.
+            task: The task to execute.
+            context: Context for the agent.
+
+        Returns:
+            The agent's response string.
+        """
+        return worker.execute(task, context)
+
+    def _execute_single_worker(
+        self,
+        agent_name: str,
+        agent_task: str,
+        image_path: Optional[str],
+        user_context: Optional[Dict[str, Any]],
+        previous_outputs: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Execute a single worker agent task with error handling and retry logic.
+
+        Uses exponential backoff retry for transient LLM API failures.
+        """
+        worker = self.workers.get(agent_name)
+        if not worker:
+            error_msg = f"Unknown agent: {agent_name}"
+            logger.error(error_msg)
+            return {"agent": agent_name, "task": agent_task, "result": error_msg, "error": True}
+
+        # Build context
+        context = self._build_agent_context(agent_name, image_path, user_context, previous_outputs)
+
+        self._log(f"\n🔧 [{agent_name.capitalize()}] Executing...")
+        self.message_bus.send(agent_name, "system", "status", f"{agent_name.capitalize()} Agent working...")
+
+        try:
+            # Execute with retry logic for API failures
+            result = self._execute_with_retry(worker, agent_task, context)
+            self._log(f"✅ [{agent_name.capitalize()}] Complete!")
+            preview = result[:150] + "..." if len(result) > 150 else result
+            self._log(f"   Result: {preview}")
+
+            return {
+                "agent": agent_name,
+                "task": agent_task,
+                "result": result,
+                "error": False
+            }
+
+        except Exception as e:
+            error_msg = f"Error: {str(e)}"
+            logger.error("[%s] %s", agent_name, error_msg)
+            return {
+                "agent": agent_name,
+                "task": agent_task,
+                "result": error_msg,
+                "error": True
+            }
+
+    def _synthesize_analysis(
+        self, 
+        delegations: List[Dict[str, str]], 
+        agent_outputs: List[Dict[str, Any]]
+    ) -> str:
+        """Step 3: Synthesize final response."""
+        self._log(f"\n{'─'*70}")
+        self._log("🧭 [Coordinator] Synthesizing final response...")
+        self.message_bus.send("coordinator", "system", "status", "Preparing final response...")
+        
+        return self._synthesize_results(delegations, agent_outputs)
     
     def _build_agent_context(
         self, 

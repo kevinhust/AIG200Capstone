@@ -1,6 +1,13 @@
 
+"""Fitness Agent for exercise and wellness advice.
+
+Provides personalized activity suggestions based on calorie intake,
+user goals, and restrictions. Integrates with Nutrition Agent
+output for contextual recommendations.
+"""
+
 import logging
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from src.agents.base_agent import BaseAgent
 
 logger = logging.getLogger(__name__)
@@ -53,11 +60,11 @@ Keep your advice short, encouraging, and scientifically grounded. Speak directly
             """
         )
 
-    def execute(self, task: str, context: Optional[List[Dict[str, str]]] = None) -> str:
+    def execute(self, task: str, context: Optional[List[Dict[str, Any]]] = None) -> str:
         """
         Execute fitness advice task. Use context from Nutrition Agent if available.
         """
-        logger.info(f"[FitnessAgent] Analyzing task: {task}")
+        logger.info("[FitnessAgent] Analyzing task: %s", task)
         
         # Check context for nutrition info to augment the prompt
         nutrition_context = ""

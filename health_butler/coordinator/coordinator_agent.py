@@ -1,5 +1,12 @@
 
-from typing import Dict, List
+"""Coordinator Agent for Health Butler AI system.
+
+Routes user requests to appropriate specialist agents (Nutrition/Fitness)
+based on keyword analysis and health context. Extends RouterAgent
+with health-specific delegation logic.
+"""
+
+from typing import Dict, List, Any
 from src.agents.router_agent import RouterAgent
 
 class CoordinatorAgent(RouterAgent):
@@ -25,10 +32,10 @@ DELEGATION:
 - agent: <agent_name>
 - task: <specific task for that agent>
 """
-        # Initialize BaseAgent directly to override Router's init completely while keeping inheritance structure
-        super(RouterAgent, self).__init__(role="coordinator", system_prompt=system_prompt)
+        # Initialize BaseAgent directly to override Router's role
+        super(CoordinatorAgent, self).__init__(role="coordinator", system_prompt=system_prompt)
 
-    def _simple_delegate(self, task: str) -> List[Dict[str, str]]:
+    def _simple_delegate(self, task: str) -> List[Dict[str, Any]]:
         """
         Health-specific fallback delegation.
         """

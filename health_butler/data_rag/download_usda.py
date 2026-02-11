@@ -133,7 +133,7 @@ def main():
         time.sleep(0.3)
     
     # Save results
-    with open(output_path, "w") as f:
+    with open(output_path, "w", encoding='utf-8') as f:
         json.dump(results, f, indent=2)
     
     found = sum(1 for r in results if r["fdcId"])

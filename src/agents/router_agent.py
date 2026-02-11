@@ -38,8 +38,11 @@ DELEGATION:
 - task: <specific task for that agent>
 
 You may delegate to multiple agents in sequence or parallel."""
-        
-        super().__init__(role="router", system_prompt=system_prompt, **kwargs)
+        # Allow role and system_prompt override via kwargs
+        # (e.g., CoordinatorAgent passes role="coordinator" with custom system_prompt)
+        role = kwargs.pop('role', 'router')
+        system_prompt_override = kwargs.pop('system_prompt', system_prompt)
+        super().__init__(role=role, system_prompt=system_prompt_override, **kwargs)
     
     def analyze_and_delegate(self, user_task: str) -> List[Dict[str, str]]:
         """

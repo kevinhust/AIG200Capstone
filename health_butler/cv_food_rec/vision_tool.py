@@ -1,5 +1,12 @@
+"""Vision Tool for food recognition using Vision Transformer (ViT).
+
+Uses HuggingFace ViT model (nateraw/food-vit-101) to classify
+food items from images. Provides graceful fallback to alternative models
+if primary model fails to load.
+"""
+
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 from PIL import Image
 import torch
@@ -14,29 +21,29 @@ class VisionTool:
     Phase 2: Integration with HuggingFace ViT (nateraw/food-vit-101).
     """
     
-    def __init__(self, model_name: str = "StatsGary/VIT-food101-image-classifier"):
+    def __init__(self, model_name: str = "StatsGary/VIT-food101-image-classifier") -> None:
         self.model_name = model_name
         self._load_model()
     
-    def _load_model(self):
+    def _load_model(self) -> None:
         """Load the ViT model and processor."""
         try:
-            logger.info(f"Loading ViT model: {self.model_name}...")
+            logger.info("Loading ViT model: %s...", self.model_name)
             self.processor = ViTImageProcessor.from_pretrained(self.model_name)
             self.model = ViTForImageClassification.from_pretrained(self.model_name)
             self.model.eval()
             logger.info("ViT model loaded successfully.")
         except Exception as e:
-            logger.warning(f"Failed to load {self.model_name}: {e}. Trying fallback 'google/vit-base-patch16-224'...")
+            logger.warning("Failed to load %s: %s. Trying fallback 'google/vit-base-patch16-224'...", self.model_name, e)
             try:
                 fallback = "google/vit-base-patch16-224"
                 self.processor = ViTImageProcessor.from_pretrained(fallback)
                 self.model = ViTForImageClassification.from_pretrained(fallback)
                 self.model.eval()
                 self.model_name = fallback
-                logger.info(f"Fallback model {fallback} loaded successfully.")
+                logger.info("Fallback model %s loaded successfully.", fallback)
             except Exception as e2:
-                logger.error(f"Critical: Failed to load fallback model: {e2}")
+                logger.error("Critical: Failed to load fallback model: %s", e2)
                 self.model = None
             
     def detect_food(self, image_path: str) -> List[Dict[str, Any]]:
@@ -44,7 +51,7 @@ class VisionTool:
         Classify food items in the given image.
         Returns a list containing the top prediction with label and confidence.
         """
-        logger.info(f"Analyzing image: {image_path}")
+        logger.info("Analyzing image: %s", image_path)
         image_path_obj = Path(image_path)
         
         if not image_path_obj.exists():
@@ -66,7 +73,7 @@ class VisionTool:
             label = self.model.config.id2label[predicted_class_idx]
             confidence = torch.nn.functional.softmax(logits, dim=-1)[0, predicted_class_idx].item()
             
-            logger.info(f"Detected: {label} ({confidence:.2f})")
+            logger.info("Detected: %s (%.2f)", label, confidence)
             
             return [{
                 "label": label,
@@ -75,7 +82,7 @@ class VisionTool:
             }]
             
         except Exception as e:
-            logger.error(f"Error during food detection: {e}")
+            logger.error("Error during food detection: %s", e)
             return [{"error": str(e)}]
 
 # Standalone execution for testing
