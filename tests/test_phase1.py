@@ -15,14 +15,10 @@ from health_butler.main import HealthSwarmOrchestrator
 def test_rag_tool():
     """Verify RAG tool query."""
     tool = RagTool()
-    # Ensure KB is populated (assuming ingestion script ran)
-    # Ensure KB is populated (assuming ingestion script ran)
-    if tool.collection.count() == 0:
-        pass
     
     # Add dummy doc if empty to test search logic
     if tool.collection.count() == 0:
-        tool.add_documents([{"text": "Chicken breast is rich in protein", "metadata": {}}])
+        tool.add_documents([{"text": "Chicken breast is rich in protein", "metadata": {}, "id": "test_1"}])
     
     # Use 'chicken' as verified in previous fix
     results = tool.query("chicken")

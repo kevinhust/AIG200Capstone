@@ -1,145 +1,180 @@
 import streamlit as st
-import time
-from PIL import Image
 import sys
+import os
 from pathlib import Path
+import tempfile
 
 # Add project root to path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-# Import tools (Phase 2 Prototype)
-# In Phase 3, we will import the CoordinatorAgent here.
+# Import Swarm
 try:
-    from health_butler.cv_food_rec.vision_tool import VisionTool
-    from health_butler.data_rag.rag_tool import RagTool
+    from health_butler.swarm import HealthSwarm
 except ImportError as e:
-    st.error(f"Failed to import core modules: {e}")
+    st.error(f"Failed to import HealthSwarm: {e}")
     st.stop()
 
 # Page Config
 st.set_page_config(
     page_title="Personal Health Butler AI",
     page_icon="🤖",
-    layout="wide"
+    layout="centered"
 )
 
-# Initialize Tools (Cached)
-@st.cache_resource
-def load_tools():
-    vision = VisionTool()
-    rag = RagTool()
-    return vision, rag
+# Custom CSS
+st.markdown("""
+<style>
+    .stChatMessage {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .agent-thought {
+        font-size: 0.8rem;
+        color: #666;
+        border-left: 2px solid #ccc;
+        padding-left: 10px;
+        margin: 5px 0;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-try:
-    with st.spinner("Initializing AI Core..."):
-        vision_tool, rag_tool = load_tools()
-except Exception as e:
-    st.error(f"Failed to load AI models: {e}")
-    st.stop()
+# Initialize Swarm (Cached per session)
+if "swarm" not in st.session_state:
+    with st.spinner("Waking up the Agent Swarm..."):
+        # Initialize swarm with verbose logging
+        st.session_state.swarm = HealthSwarm(verbose=True)
 
-# Sidebar
-with st.sidebar:
-    st.title("Health Butler AI 🍎")
-    st.markdown("---")
-    st.header("Debug Controls")
-    
-    if st.button("Reset Session"):
-        st.session_state.messages = []
-        st.rerun()
-        
-    st.markdown("---")
-    st.info("Phase 2 Prototype\n- ViT Vision\n- ChromaDB RAG\n- Streamlit UI")
-
-# Main Interface
-st.title("Your Personal AI Health Assistant")
-st.markdown("Upload a meal photo or ask a nutrition question.")
-
-# Chat History
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Sidebar
+with st.sidebar:
+    st.title("Health Butler 🤖")
+    st.caption("Powered by Antigravity Swarm")
+    
+    st.markdown("### Active Agents")
+    st.success("🧭 Coordinator")
+    st.success("🥗 Nutrition")
+    st.success("🏃 Fitness")
+    
+    st.markdown("---")
+    if st.button("Reset Conversation"):
+        st.session_state.messages = []
+        st.session_state.swarm.reset()
+        st.rerun()
+
+# Main Interface
+st.title("Personal Health Butler")
+st.markdown("Upload a meal photo or describe your day. I'll analyze nutrition and suggest workouts.")
+
+# 1. Display Chat History
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
         if "image" in msg:
             st.image(msg["image"], width=300)
+        st.markdown(msg["content"])
+        
+        # Show agent details if available
+        if "delegations" in msg:
+            with st.expander("See Agent Reasoning"):
+                for d in msg["delegations"]:
+                    st.markdown(f"**{d['agent'].capitalize()}**: {d['task']}")
+                if "logs" in msg:
+                    for log in msg["logs"]:
+                        st.text(f"{log['from']} -> {log['to']}: {log['type']}")
 
-# Input Area
-col1, col2 = st.columns([1, 4])
+# 2. Input Handling
+uploaded_file = st.file_uploader("📸 Snap a meal", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
+user_input = st.chat_input("Type a message...")
 
-# Image Upload
-uploaded_file = st.file_uploader("Upload Meal Photo", type=["jpg", "png", "jpeg"])
-if uploaded_file and "last_processed_file" not in st.session_state:
-    st.session_state.last_processed_file = None
-
-# Logic when image is uploaded
-if uploaded_file and uploaded_file != st.session_state.last_processed_file:
-    # Save temp file
-    temp_path = Path("temp.jpg")
-    with open(temp_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+# Logic Trigger
+if user_input or uploaded_file:
+    # Determine input type
+    image_path = None
+    prompt = user_input
     
-    # Display User Message
-    with st.chat_message("user"):
-        st.image(uploaded_file, caption="Analyzing this meal...", width=300)
-    st.session_state.messages.append({"role": "user", "content": "Analyze this meal.", "image": uploaded_file})
-    
-    # AI Response (Thinking)
+    # Handle Image
+    if uploaded_file:
+        # Save temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+            tmp.write(uploaded_file.getbuffer())
+            image_path = tmp.name
+        
+        # If no text provided with image, use default prompt
+        if not prompt:
+            prompt = "Analyze this meal and give me advice."
+            
+        # Display User Message
+        with st.chat_message("user"):
+            st.image(uploaded_file, width=300)
+            st.markdown(prompt)
+        
+        st.session_state.messages.append({
+            "role": "user", 
+            "content": prompt, 
+            "image": uploaded_file
+        })
+    else:
+        # Text only
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt})
+
+    # 3. Swarm Execution
     with st.chat_message("assistant"):
-        status_container = st.status("Thinking...", expanded=True)
+        response_placeholder = st.empty()
+        status = st.status("🧠 Swarm is thinking...", expanded=True)
         
-        # 1. Vision Analysis
-        status_container.write("🔍 Scanning image with ViT...")
-        vision_results = vision_tool.detect_food(str(temp_path))
-        
-        if vision_results and "label" in vision_results[0]:
-            food_item = vision_results[0]["label"]
-            confidence = vision_results[0]["confidence"]
-            status_container.write(f"✅ Detected: **{food_item}** ({confidence:.1%})")
+        try:
+            # Execute Swarm
+            status.write("🧭 Coordinator analyzing intent...")
             
-            # 2. RAG Lookup
-            status_container.write(f"📚 Looking up nutrition for '{food_item}'...")
-            rag_results = rag_tool.query(food_item, top_k=1)
+            # We assume swarm.execute is synchronous for now. 
+            # In a real async setup, we'd poll for updates.
+            result = st.session_state.swarm.execute(
+                user_input=prompt,
+                image_path=image_path
+            )
             
-            nutrition_info = "No specific nutrition data found."
-            if rag_results:
-                nutrition_info = rag_results[0]["text"]
-                status_container.write("✅ Nutrition data retrieved.")
+            # Visualize Steps based on logs
+            delegations = result.get("delegations", [])
+            logs = result.get("message_log", [])
             
-            status_container.update(label="Analysis Complete", state="complete", expanded=False)
+            for d in delegations:
+                status.write(f"👉 Delegated to **{d['agent'].capitalize()} Agent**")
+                
+            # Check for specific agent activities in logs
+            agent_activities = set()
+            for log in logs:
+                if log['from'] in ['nutrition', 'fitness'] and log['type'] == 'result':
+                    agent_activities.add(log['from'])
             
-            # Final Response
-            response_text = f"I identified **{food_item}** in your photo.\n\nHere is the nutritional info I found:\n> {nutrition_info}\n\nWould you like a fitness recommendation for this meal?"
-            st.markdown(response_text)
-            st.session_state.messages.append({"role": "assistant", "content": response_text})
+            if 'nutrition' in agent_activities:
+                status.write("🥗 Nutrition analysis complete")
+            if 'fitness' in agent_activities:
+                status.write("🏃 Fitness plan generated")
             
-        else:
-            status_container.update(label="Analysis Failed", state="error")
-            st.error("Could not identify the food item.")
-    
-    st.session_state.last_processed_file = uploaded_file
-
-# Text Input
-if prompt := st.chat_input("Ask about nutrition or fitness..."):
-    with st.chat_message("user"):
-        st.markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
-
-    with st.chat_message("assistant"):
-        # For Phase 2, we just stick to RAG for questions
-        # In Phase 3, this will go to CoordinatorAgent
-        status = st.status("Searching knowledge base...", expanded=True)
-        results = rag_tool.query(prompt)
-        status.update(label="Complete", state="complete", expanded=False)
-        
-        if results:
-            response = f"Based on your query, here is what I found:\n\n"
-            for r in results:
-                response += f"- {r['text']}\n"
-        else:
-            response = "I couldn't find relevant information in my database."
+            status.update(label="Response Ready!", state="complete", expanded=False)
             
-        st.markdown(response)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+            # Display Final Response
+            final_response = result["response"]
+            response_placeholder.markdown(final_response)
+            
+            # Save to history
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": final_response,
+                "delegations": delegations,
+                "logs": logs
+            })
+            
+        except Exception as e:
+            status.update(label="Error", state="error")
+            st.error(f"Swarm encountered an error: {e}")
+            
+    # Cleanup temp file
+    if image_path:
+        os.unlink(image_path)

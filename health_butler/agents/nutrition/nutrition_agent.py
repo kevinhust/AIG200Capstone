@@ -1,5 +1,12 @@
 
-from typing import Optional, List, Dict
+"""Nutrition Agent for food analysis and diet advice.
+
+This specialist agent analyzes food items from text or images,
+estimates calories/macros, and provides health tips using RAG
+and vision tools.
+"""
+
+from typing import Optional, List, Dict, Any
 import logging
 from src.agents.base_agent import BaseAgent
 from health_butler.cv_food_rec.vision_tool import VisionTool
@@ -31,13 +38,13 @@ If provided with tool outputs (like RAG search results), prioritize that data.
         self.vision_tool = VisionTool()
         self.rag_tool = RagTool()
 
-    def execute(self, task: str, context: Optional[List[Dict[str, str]]] = None) -> str:
+    def execute(self, task: str, context: Optional[List[Dict[str, Any]]] = None) -> str:
         """
         Execute nutrition analysis. 
         If 'image_path' is found in the task or context, use VisionTool.
         Then query RAG backbone for details.
         """
-        logger.info(f"[NutritionAgent] Executing task: {task}")
+        logger.info("[NutritionAgent] Executing task: %s", task)
         
         # Check for image path in context or task (simplified heuristic)
         image_path = None
@@ -55,21 +62,37 @@ If provided with tool outputs (like RAG search results), prioritize that data.
 
         vision_context = ""
         if image_path:
-            logger.info(f"[NutritionAgent] Vision analysis on: {image_path}")
-            vision_results = self.vision_tool.detect_food(image_path)
-            if vision_results:
-                top_item = vision_results[0]
-                vision_context = f"Visual Analysis identified: {top_item['label']} (Confidence: {top_item['confidence']:.2f})."
-                # Use the detected label to augment the RAG query
-                task = f"{task}. logic: Access nutrition info for {top_item['label']}."
+            logger.info("[NutritionAgent] Vision analysis on: %s", image_path)
+            try:
+                vision_results = self.vision_tool.detect_food(image_path)
+                # Check if vision tool returned valid results (no errors)
+                if vision_results and "error" not in vision_results[0]:
+                    top_item = vision_results[0]
+                    vision_context = f"Visual Analysis identified: {top_item['label']} (Confidence: {top_item['confidence']:.2f})."
+                    # Use the detected label to augment the RAG query
+                    task = f"{task}. logic: Access nutrition info for {top_item['label']}."
+                else:
+                    # Vision tool failed or returned an error
+                    error_msg = vision_results[0].get("error", "Unknown error") if vision_results else "No results"
+                    logger.warning("[NutritionAgent] Vision analysis failed: %s. Proceeding with text-only analysis.", error_msg)
+                    vision_context = "(Visual analysis was unavailable - analyzing from text description only)"
+            except Exception as e:
+                # Catch any unexpected exceptions from vision tool
+                logger.error("[NutritionAgent] Unexpected vision error: %s", e)
+                vision_context = "(Visual analysis was unavailable - analyzing from text description only)"
 
         # Perform RAG lookup based on the (potentially augmented) task
-        # We extract keywords from task to query RAG. 
+        # We extract keywords from task to query RAG.
         # For prototype, we just pass the full task or the vision label if available.
         query_text = task
-        if vision_context:
-             # If we saw an image, the most relevant query is the label
-             query_text = vision_results[0]['label']
+        # Only use vision label for RAG query if vision analysis succeeded
+        # (i.e., vision_context contains actual identification, not an error message)
+        if vision_context and "unavailable" not in vision_context.lower():
+             # Extract the label from vision_context for more precise RAG query
+             # Format: "Visual Analysis identified: <label> (Confidence: ...)"
+             if "identified:" in vision_context:
+                 label = vision_context.split("identified: ")[1].split(" (")[0]
+                 query_text = label
              
         rag_results = self.rag_tool.query(query_text, top_k=3)
         rag_context = ""

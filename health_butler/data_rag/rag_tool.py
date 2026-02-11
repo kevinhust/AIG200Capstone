@@ -1,5 +1,12 @@
+"""RAG Tool using ChromaDB for semantic search.
+
+Provides nutrition information retrieval using vector embeddings.
+Uses SentenceTransformerEmbeddingFunction with all-MiniLM-L6-v2 model
+for generating embeddings from food-related queries.
+"""
+
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 import chromadb
 from chromadb.utils import embedding_functions
@@ -37,17 +44,17 @@ class RagTool:
                 name=self.collection_name,
                 embedding_function=self.ef
             )
-            logger.info(f"Connected to ChromaDB at {self.db_path}, collection: {self.collection_name}")
-            logger.info(f"Collection count: {self.collection.count()}")
+            logger.info("Connected to ChromaDB at %s, collection: %s", self.db_path, self.collection_name)
+            logger.info("Collection count: %d", self.collection.count())
         except Exception as e:
-            logger.error(f"Failed to initialize ChromaDB: {e}")
+            logger.error("Failed to initialize ChromaDB: %s", e)
             raise e
 
-    def query(self, query_text: str, top_k: int = 3, filter_metadata: Dict = None) -> List[Dict[str, Any]]:
+    def query(self, query_text: str, top_k: int = 3, filter_metadata: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """
         Retrieve relevant documents using semantic search.
         """
-        logger.info(f"RAG Query: {query_text}")
+        logger.info("RAG Query: %s", query_text)
         
         try:
             results = self.collection.query(
@@ -69,7 +76,7 @@ class RagTool:
             return formatted_results
 
         except Exception as e:
-            logger.error(f"Query failed: {e}")
+            logger.error("Query failed: %s", str(e))
             return []
 
     def add_documents(self, documents: List[Dict[str, Any]]):
@@ -81,18 +88,18 @@ class RagTool:
             return
             
         texts = [d['text'] for d in documents]
-        metadatas = [d.get('metadata', {}) for d in documents]
+        metadatas = [d.get("metadata", {}) for d in documents]
         ids = [d.get('id', str(hash(d['text']))) for d in documents]
-        
+
         try:
             self.collection.upsert(
                 documents=texts,
                 metadatas=metadatas,
                 ids=ids
             )
-            logger.info(f"Upserted {len(documents)} documents to ChromaDB.")
+            logger.info("Upserted %d documents to ChromaDB.", len(documents))
         except Exception as e:
-            logger.error(f"Failed to add documents: {e}")
+            logger.error("Failed to add documents: %s", e)
 
 # Standalone execution for testing
 if __name__ == "__main__":
