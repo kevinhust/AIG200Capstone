@@ -384,3 +384,4 @@ torchvision>=0.15.0
 chromadb>=0.4.0
 sentence-transformers>=2.2.2
 transformers>=4.30.0
+discord.py>=2.4.0
