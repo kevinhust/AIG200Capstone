@@ -7,6 +7,18 @@ from health_butler.data_rag.simple_rag_tool import SimpleRagTool
 
 logger = logging.getLogger(__name__)
 
+# Mock User Profile for Prototype Phase
+MOCK_USER_PROFILE = {
+    "name": "Kevin",
+    "age": 30,
+    "weight_kg": 80,
+    "height_cm": 178,
+    "goal": "Weight Loss",
+    "activity_level": "Sedentary (Office Job)",
+    "daily_calorie_target": 2200,
+    "restrictions": "Knee pain (avoid high impact jumping)"
+}
+
 class FitnessAgent(BaseAgent):
     """
     Specialist agent for providing exercise and wellness advice.
@@ -18,6 +30,9 @@ class FitnessAgent(BaseAgent):
     """
     
     def __init__(self):
+        # Inject profile into system prompt
+        profile_str = "\n".join([f"- {k}: {v}" for k, v in MOCK_USER_PROFILE.items()])
+        
         super().__init__(
             role="fitness",
             system_prompt="""You are an expert Fitness Coach and Wellness Assistant.
