@@ -28,26 +28,54 @@ class CoordinatorAgent(RouterAgent):
     
     def __init__(self):
         system_prompt = """You are the Coordinator Agent for the Personal Health Butler AI.
-Your goal is to delegate user requests to the most appropriate health specialist.
+Your ONLY job is to analyze the user's message and decide which specialist agent(s) should handle it.
 
-Available specialist agents:
-- nutrition: Analyzes food images or descriptions, estimates calories/macros.
-- fitness: Suggests exercises, sets goals, tracks progress, learns preferences.
+## Available Specialist Agents
+
+### nutrition
+Handles: Food analysis, calorie counting, meal logging, dietary advice, macro tracking.
+Route here when: User mentions food, eating, meals, calories, macros, recipes, ingredients, diet plans, nutritional info, or uploads a food image.
+Example queries: "I ate a burger", "How many calories in rice?", "Analyze this meal", "What should I eat?"
+
+### fitness
+Handles: Exercise recommendations, workout plans, activity tracking, step counting, weight goals, body measurements, physical health metrics.
+Route here when: User asks about exercise, workouts, weight loss/gain goals, BMI, body stats, height, weight, steps, running, gym, yoga, stretching, or any physical activity.
+Example queries: "Suggest an exercise", "How tall am I?", "What workout should I do?", "I want to lose weight", "How many steps today?"
+
+## Routing Rules
+1. If the message is about FOOD or EATING → route to "nutrition"
+2. If the message is about EXERCISE, BODY STATS, or FITNESS → route to "fitness"
+3. If the message mentions EATING + wants exercise advice → route to BOTH: first "nutrition", then "fitness"
+4. If the message is a general health question → route to the MOST relevant agent
+5. If truly ambiguous → route to "nutrition" (the app's primary focus)
+
+## IMPORTANT
+- Do NOT always default to nutrition. Read the user's intent carefully.
+- Questions about body measurements (height, weight, BMI) → fitness
+- Questions about food, meals, diet → nutrition
+- "How tall am I?" → fitness (body stats)
+- "What did I eat?" → nutrition (meal history)
 
 You MUST respond with a valid JSON planning object.
 """
         # Initialize BaseAgent directly to override Router's role
-        super(CoordinatorAgent, self).__init__(role="coordinator", system_prompt=system_prompt)
+        super(CoordinatorAgent, self).__init__(role="coordinator", system_prompt=system_prompt, use_openai_api=False)
 
     def analyze_and_delegate(self, user_task: str) -> List[Dict[str, Any]]:
         """
         Analyze task using Gemini Structured Output for 100% reliable JSON.
         """
         if not self.client:
+            logger.warning("Coordinator client is None, using keyword fallback")
             return self._simple_delegate(user_task)
 
-        prompt = f"PLAN DELEGATION FOR TASK: {user_task}"
-        
+        prompt = f"""Analyze the following user message and decide which agent(s) should handle it.
+
+USER MESSAGE: "{user_task}"
+
+Decide: should this go to "nutrition", "fitness", or both?
+Return a JSON object with a "delegations" array."""
+
         try:
             response = self.client.models.generate_content(
                 model=settings.GEMINI_MODEL_NAME,
@@ -76,7 +104,16 @@ You MUST respond with a valid JSON planning object.
             
             data = response.parsed
             if isinstance(data, dict) and "delegations" in data:
-                return data["delegations"]
+                # Validate agent names — only allow known agents
+                valid_delegations = []
+                for d in data["delegations"]:
+                    agent = d.get("agent", "").lower().strip()
+                    if agent in ("nutrition", "fitness"):
+                        valid_delegations.append({"agent": agent, "task": d.get("task", user_task)})
+                
+                if valid_delegations:
+                    return valid_delegations
+            
             return self._simple_delegate(user_task)
             
         except Exception as e:
@@ -86,56 +123,78 @@ You MUST respond with a valid JSON planning object.
     def _simple_delegate(self, task: str) -> List[Dict[str, Any]]:
         """
         Enhanced health-specific fallback delegation with chaining support.
+        Uses comprehensive keyword matching when LLM routing is unavailable.
         """
         task_lower = task.lower()
         delegations = []
         
-        # Check for goal-related keywords (fitness only)
-        if any(word in task_lower for word in ['goal', 'progress', 'track', 'lose weight', 'gain muscle']):
-            delegations.append({'agent': 'fitness', 'task': task})
+        # ── Fitness-first keywords (body stats, exercise, goals) ──
+        fitness_keywords = [
+            # Exercise & workout
+            'exercise', 'workout', 'work out', 'gym', 'fitness', 'training',
+            'stretch', 'yoga', 'cardio', 'hiit', 'plank', 'squat', 'pushup',
+            'push-up', 'pull-up', 'pullup', 'deadlift', 'bench press',
+            # Activity tracking
+            'walk', 'run', 'jog', 'swim', 'bike', 'cycling', 'steps',
+            'activity', 'active', 'sedentary',
+            # Body stats & measurement
+            'tall', 'height', 'weight', 'bmi', 'body', 'muscle', 'fat percentage',
+            # Goals
+            'goal', 'progress', 'track', 'lose weight', 'gain muscle',
+            'weight loss', 'weight gain', 'bulk', 'cut',
+            # Recommendations
+            'suggest exercise', 'recommend exercise', 'what exercise',
+            'what workout', 'how to burn',
+            # Completion tracking
+            'completed', 'finished', 'done with',
+        ]
+        
+        # ── Nutrition-first keywords (food, meals, calories) ──
+        nutrition_keywords = [
+            # Food & eating
+            'food', 'eat', 'ate', 'eating', 'eaten',
+            'calorie', 'calories', 'kcal',
+            'meal', 'meals', 'dish',
+            'nutrition', 'nutrient', 'nutritional',
+            'diet', 'dietary',
+            # Meals of the day
+            'lunch', 'dinner', 'breakfast', 'brunch', 'snack', 'supper',
+            # Food items
+            'recipe', 'ingredient', 'cook', 'cooking',
+            'protein', 'carb', 'carbs', 'fat', 'fiber', 'sugar', 'sodium',
+            # Macro tracking
+            'macro', 'macros', 'intake', 'portion',
+            # Analysis
+            'analyze this meal', 'what did i eat', 'how many calories',
+        ]
+        
+        has_fitness = any(word in task_lower for word in fitness_keywords)
+        has_nutrition = any(word in task_lower for word in nutrition_keywords)
+        
+        # ── Both detected: check for chaining (ate → exercise) ──
+        if has_nutrition and has_fitness:
+            delegations.append({'agent': 'nutrition', 'task': task})
+            delegations.append({'agent': 'fitness', 'task': 'Based on the previous nutrition analysis, suggest appropriate exercises.'})
             return delegations
         
-        # Check for exercise completion tracking
-        if any(word in task_lower for word in ['completed', 'finished', 'done with']) and \
-           any(word in task_lower for word in ['walk', 'run', 'swim', 'exercise', 'workout']):
-            delegations.append({'agent': 'fitness', 'task': task})
-            return delegations
-        
-        # Check for nutrition keywords
-        has_nutrition = any(word in task_lower for word in [
-            'food', 'eat', 'ate', 'calorie', 'meal', 'nutrition', 
-            'diet', 'lunch', 'dinner', 'breakfast', 'snack'
-        ])
-        
-        # Check for fitness keywords
-        has_fitness = any(word in task_lower for word in [
-            'exercise', 'walk', 'run', 'gym', 'workout', 'fitness', 
-            'steps', 'activity', 'burn calories'
-        ])
-        
-        # Meal analysis → chain both agents
+        # ── Meal + "ate" pattern → chain both ──
         if has_nutrition and ('ate' in task_lower or 'just ate' in task_lower or 'i ate' in task_lower):
-            # First nutrition to analyze meal
             delegations.append({'agent': 'nutrition', 'task': task})
-            # Then fitness to suggest exercises
-            delegations.append({
-                'agent': 'fitness',
-                'task': 'Suggest exercises to balance this meal intake'
-            })
+            delegations.append({'agent': 'fitness', 'task': 'Suggest exercises to balance this meal intake'})
             return delegations
         
-        # Nutrition only
-        if has_nutrition:
-            delegations.append({'agent': 'nutrition', 'task': task})
-        
-        # Fitness only
+        # ── Fitness only ──
         if has_fitness:
             delegations.append({'agent': 'fitness', 'task': task})
+            return delegations
         
-        # Default to nutrition if ambiguous (it's a food app typically)
-        if not delegations:
+        # ── Nutrition only ──
+        if has_nutrition:
             delegations.append({'agent': 'nutrition', 'task': task})
+            return delegations
         
+        # ── Default to nutrition if truly ambiguous ──
+        delegations.append({'agent': 'nutrition', 'task': task})
         return delegations
     
     def supports_chaining(self) -> bool:

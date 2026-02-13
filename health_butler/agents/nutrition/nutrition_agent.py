@@ -45,7 +45,8 @@ CRITICAL RULES:
 - Use 'RAG_MATCHES' to ground your 'total_macros' calculation.
 - If a high-confidence RAG match exists, prioritize its per-100g data calibrated by the estimated portion size.
 - DO NOT return 0 for macros if food is detected.
-"""
+""",
+            use_openai_api=False
         )
         self.vision_tool = vision_tool or VisionTool()
         self.gemini_engine = GeminiVisionEngine()

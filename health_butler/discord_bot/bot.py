@@ -231,24 +231,33 @@ class DietSelectView(discord.ui.View):
             return await interaction.response.send_message("This setup is for someone else!", ephemeral=True)
 
         global demo_mode, _demo_user_profile, demo_user_id
-        _demo_user_profile[interaction.user.id] = {"diet": select.values, "meals": []}
+        user_id = str(interaction.user.id)
+
+        # Update existing profile (don't overwrite!)
+        if user_id not in _demo_user_profile:
+            _demo_user_profile[user_id] = {"meals": []}
+        _demo_user_profile[user_id]["diet"] = select.values
+        if "meals" not in _demo_user_profile[user_id]:
+            _demo_user_profile[user_id]["meals"] = []
+
         demo_mode = True
-        demo_user_id = str(interaction.user.id)
+        demo_user_id = user_id
 
         # Save to Supabase
-        save_user_profile(demo_user_id, _demo_user_profile[interaction.user.id])
+        save_user_profile(demo_user_id, _demo_user_profile[user_id])
 
+        profile = _demo_user_profile[user_id]
         summary = (
             "🎉 **Registration Complete!**\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             "👤 **Profile Ready** (Persisted to Database)\n"
-            f"• Name: `{_demo_user_profile[interaction.user.id]['name']}`\n"
-            f"• Age: `{_demo_user_profile[interaction.user.id]['age']}` | Gender: `{_demo_user_profile[interaction.user.id]['gender']}`\n"
-            f"• Metrics: `{_demo_user_profile[interaction.user.id]['height']}cm / {_demo_user_profile[interaction.user.id]['weight']}kg`\n"
-            f"• Goal: `{_demo_user_profile[interaction.user.id]['goal']}`\n"
-            f"• Conditions: `{', '.join(_demo_user_profile[interaction.user.id]['conditions']) if _demo_user_profile[interaction.user.id]['conditions'] else 'None'}`\n"
-            f"• Activity: `{_demo_user_profile[interaction.user.id]['activity']}`\n"
-            f"• Diet: `{', '.join(_demo_user_profile[interaction.user.id]['diet']) if _demo_user_profile[interaction.user.id]['diet'] else 'None'}`\n"
+            f"• Name: `{profile.get('name', 'N/A')}`\n"
+            f"• Age: `{profile.get('age', 'N/A')}` | Gender: `{profile.get('gender', 'N/A')}`\n"
+            f"• Metrics: `{profile.get('height', 'N/A')}cm / {profile.get('weight', 'N/A')}kg`\n"
+            f"• Goal: `{profile.get('goal', 'N/A')}`\n"
+            f"• Conditions: `{', '.join(profile.get('conditions', [])) or 'None'}`\n"
+            f"• Activity: `{profile.get('activity', 'N/A')}`\n"
+            f"• Diet: `{', '.join(profile.get('diet', [])) or 'None'}`\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
             "💾 **Your profile is saved!** Data persists across sessions.\n\n"
             "✨ You can now ask health questions or upload food photos!"

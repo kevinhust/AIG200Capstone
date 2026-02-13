@@ -4,22 +4,32 @@ services:
   bot:
     build: .
     container_name: health-butler-bot
+    env_file:
+      - .env
     environment:
-      - DISCORD_TOKEN=${DISCORD_BOT_TOKEN}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
-      - OPENAI_MODEL=${OPENAI_MODEL}
+      # Override/ensure these are passed through from .env
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - USDA_API_KEY=${USDA_API_KEY}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_KEY=${SUPABASE_KEY}
-      - DISCORD_ACTIVITY=Local_Docker_Testing
+      - DISCORD_ACTIVITY=${DISCORD_ACTIVITY:-Local_Docker_Testing}
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - DEPLOY_ENV=${DEPLOY_ENV:-local}
       - PORT=8080
+      # Optional services (uncomment if using)
+      # - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      # - USDA_API_KEY=${USDA_API_KEY}
+      # - SUPABASE_URL=${SUPABASE_URL}
+      # - SUPABASE_KEY=${SUPABASE_KEY}
     ports:
       - "8085:8080"
+    volumes:
+      - health-butler-data:/app/data
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()" ]
       interval: 30s
       timeout: 10s
       retries: 3
+
+volumes:
+  health-butler-data:

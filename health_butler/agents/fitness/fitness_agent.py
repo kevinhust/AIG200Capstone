@@ -57,7 +57,8 @@ You MUST return a valid JSON object with the following structure:
 SAFETY POLICY:
 - If a user has a condition (e.g., Knee Injury), NEVER suggest high-impact movements.
 - Prioritize the "Safe Exercises" provided in the context.
-            """
+            """,
+            use_openai_api=False
         )
         self.rag = SimpleRagTool()
 

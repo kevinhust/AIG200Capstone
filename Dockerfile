@@ -41,8 +41,8 @@ ENV PATH=/usr/local/bin:$PATH
 COPY health_butler/ ./health_butler/
 COPY src/ ./src/
 
-# Create tmp directory for image processing
-RUN mkdir -p /tmp && chmod 777 /tmp
+# Create directories for image processing and data persistence
+RUN mkdir -p /tmp /app/data && chmod 777 /tmp /app/data
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
