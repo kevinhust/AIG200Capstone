@@ -1,6 +1,12 @@
 import logging
 import sys
 from pathlib import Path
+import pytest
+
+pytest.importorskip("numpy")
+pytest.importorskip("chromadb")
+pytest.importorskip("sentence_transformers")
+
 from PIL import Image
 import numpy as np
 

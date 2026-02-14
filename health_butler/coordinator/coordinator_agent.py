@@ -8,12 +8,31 @@ with health-specific delegation logic.
 
 import json
 import logging
+import re
 from typing import Dict, List, Any, Optional
 from src.agents.router_agent import RouterAgent
 from src.config import settings
 from google.genai.types import GenerateContentConfig
 
 logger = logging.getLogger(__name__)
+
+_PROFILE_QUERY_PATTERNS = [
+    r"\bwho\s*am\s*i\b",
+    r"\bwhoami\b",
+    r"\bmy\s+profile\b",
+    r"\bshow\s+(me\s+)?(my\s+)?profile\b",
+    r"\b(profile|stats|metrics)\b\s*\??$",
+    r"\bwhat('?s| is)\s+my\s+(name|age|height|weight|goal|diet|conditions|activity|preferences)\b",
+    r"\bmy\s+(name|age|height|weight|goal|goals|diet|conditions|activity|preferences)\b\s*\??$",
+    r"\b(daily\s+)?calorie\s+target\b",
+    r"\btarget\s+calories\b",
+    r"\bdaily\s+target\b",
+]
+
+
+def _matches_any_pattern(text_lower: str, patterns: List[str]) -> bool:
+    return any(re.search(p, text_lower) for p in patterns)
+
 
 class CoordinatorAgent(RouterAgent):
     """
@@ -42,12 +61,18 @@ Handles: Exercise recommendations, workout plans, activity tracking, step counti
 Route here when: User asks about exercise, workouts, weight loss/gain goals, BMI, body stats, height, weight, steps, running, gym, yoga, stretching, or any physical activity.
 Example queries: "Suggest an exercise", "How tall am I?", "What workout should I do?", "I want to lose weight", "How many steps today?"
 
+### profile/identity (route to fitness)
+Handles: Requests about the user's own onboarding/profile details.
+Route here when: User asks who they are, asks for their profile/stats, or asks about their saved goal/conditions/preferences.
+Example queries: "Who am I?", "Show my profile", "What are my goals?"
+
 ## Routing Rules
 1. If the message is about FOOD or EATING → route to "nutrition"
 2. If the message is about EXERCISE, BODY STATS, or FITNESS → route to "fitness"
 3. If the message mentions EATING + wants exercise advice → route to BOTH: first "nutrition", then "fitness"
-4. If the message is a general health question → route to the MOST relevant agent
-5. If truly ambiguous → route to "nutrition" (the app's primary focus)
+4. If the message is about the USER'S PROFILE / IDENTITY → route to "fitness"
+5. If the message is a general health question → route to the MOST relevant agent
+6. If truly ambiguous → route to "nutrition" (the app's primary focus)
 
 ## IMPORTANT
 - Do NOT always default to nutrition. Read the user's intent carefully.
@@ -65,6 +90,16 @@ You MUST respond with a valid JSON planning object.
         """
         Analyze task using Gemini Structured Output for 100% reliable JSON.
         """
+        task_lower = (user_task or "").strip().lower()
+        if task_lower and _matches_any_pattern(task_lower, _PROFILE_QUERY_PATTERNS):
+            # Avoid routing profile/identity queries to nutrition.
+            return [
+                {
+                    "agent": "fitness",
+                    "task": "Show the user's saved profile details and current goals/preferences.",
+                }
+            ]
+
         if not self.client:
             logger.warning("Coordinator client is None, using keyword fallback")
             return self._simple_delegate(user_task)
@@ -127,6 +162,11 @@ Return a JSON object with a "delegations" array."""
         """
         task_lower = task.lower()
         delegations = []
+
+        # ── Profile / identity queries should not go to nutrition ──
+        if task_lower and _matches_any_pattern(task_lower, _PROFILE_QUERY_PATTERNS):
+            delegations.append({"agent": "fitness", "task": task})
+            return delegations
         
         # ── Fitness-first keywords (body stats, exercise, goals) ──
         fitness_keywords = [

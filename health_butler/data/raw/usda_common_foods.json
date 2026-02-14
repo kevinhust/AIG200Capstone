@@ -282,31 +282,31 @@
     "dataType": "Branded",
     "nutrients": {
       "protein": {
-        "value": 12.5,
+        "value": 1.09,
         "unit": "G"
       },
       "fat": {
-        "value": 6.25,
+        "value": 0.33,
         "unit": "G"
       },
       "carbs": {
-        "value": 40.6,
+        "value": 22.84,
         "unit": "G"
       },
       "calories": {
-        "value": 312,
+        "value": 89.0,
         "unit": "KCAL"
       },
       "sugar": {
-        "value": 6.25,
+        "value": 12.23,
         "unit": "G"
       },
       "fiber": {
-        "value": 6.2,
+        "value": 2.6,
         "unit": "G"
       },
       "sodium": {
-        "value": 594,
+        "value": 1.0,
         "unit": "MG"
       }
     }
@@ -3178,27 +3178,31 @@
     "dataType": "Branded",
     "nutrients": {
       "protein": {
-        "value": 4.76,
+        "value": 0.94,
         "unit": "G"
       },
       "fat": {
-        "value": 0.0,
+        "value": 0.12,
         "unit": "G"
       },
       "carbs": {
-        "value": 90.5,
+        "value": 11.75,
         "unit": "G"
       },
       "calories": {
-        "value": 381,
+        "value": 47.0,
         "unit": "KCAL"
       },
       "sugar": {
-        "value": 90.5,
+        "value": 9.35,
+        "unit": "G"
+      },
+      "fiber": {
+        "value": 2.4,
         "unit": "G"
       },
       "sodium": {
-        "value": 381,
+        "value": 0.0,
         "unit": "MG"
       }
     }

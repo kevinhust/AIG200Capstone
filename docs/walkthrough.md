@@ -11,6 +11,19 @@ We have successfully completed local Docker deployment testing for the Health Bu
 ### 2. Localization & Premium Onboarding
 - **English-Only Interface**: All bot communications and system messages are localized to English.
 -### 🚀 Premium UI Flow (5-Step Comprehensive)
+### 3. Intent Routing Guardrails
+- **Fast intent checks**: Profile/help/summary queries are handled immediately (no agent calls).
+- **Edge-case fix**: Messages like **"who am I?"** now return the user's saved profile instead of triggering the Nutrition pipeline.
+
+### 4. Interactive Meal Logging (Scan → Add/Adjust/Remove)
+After you upload a food photo, the Nutrition embed includes interactive controls:
+- **Add to Today**: logs the scan into your daily totals.
+- **Adjust Serving**: opens a modal to apply a serving multiplier (e.g., `0.5`, `2`).
+- **Remove from Today**: deletes that logged meal from your totals (undo).
+
+Only **image scans** affect consumed totals by default (text-only nutrition Q&A won’t pollute your diary).
+
+### 🚀 Premium UI Flow (5-Step Comprehensive)
 We've implemented a professional, high-fidelity registration experience using chained Discord components:
 
 1.  **Welcome**: `/demo` triggers a clean welcome message with a green **"Start Setup"** button.

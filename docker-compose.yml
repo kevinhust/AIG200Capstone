@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   bot:
     build: .
@@ -9,8 +7,11 @@ services:
     environment:
       # Credentials can come from shell exports or .env
       - DISCORD_TOKEN
+      - DISCORD_ALLOWED_CHANNEL_IDS
+      - DISCORD_ALLOWED_USER_IDS
       - GOOGLE_API_KEY
       - SUPABASE_URL
+      - SUPABASE_SERVICE_ROLE_KEY
       - SUPABASE_KEY
       # Non-secret runtime defaults (secrets come from .env via env_file)
       - DISCORD_ACTIVITY=${DISCORD_ACTIVITY:-Local_Docker_Testing}

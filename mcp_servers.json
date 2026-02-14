@@ -81,6 +81,17 @@
       "url": "http://localhost:8000/mcp",
       "enabled": false,
       "env": {}
+    },
+    {
+      "name": "supabase",
+      "description": "Supabase project schema and data management",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "enabled": false,
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "${SUPABASE_DB_URL}"
+      }
     }
   ]
 }

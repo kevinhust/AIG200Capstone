@@ -1,15 +1,20 @@
 import logging
 import json
 import re
+import colorsys
 from typing import Optional, List, Dict, Any
 from src.agents.base_agent import BaseAgent
 from src.config import settings
 from google.genai.types import GenerateContentConfig
+from PIL import Image, ImageStat
 from health_butler.cv_food_rec.vision_tool import VisionTool
 from health_butler.cv_food_rec.gemini_vision_engine import GeminiVisionEngine
 from health_butler.data_rag.simple_rag_tool import SimpleRagTool
 
 logger = logging.getLogger(__name__)
+
+# Backwards-compatible alias for older tests and modules that referenced RagTool.
+RagTool = SimpleRagTool
 
 class NutritionAgent(BaseAgent):
     """
@@ -59,6 +64,8 @@ CRITICAL RULES:
         self.vision_tool = vision_tool or VisionTool()
         self.gemini_engine = GeminiVisionEngine()
         self.rag = SimpleRagTool()
+        # Backwards-compatible attribute name used by earlier phases/tests.
+        self.rag_tool = self.rag
 
     def _extract_json(self, text: str) -> Optional[Dict[str, Any]]:
         """Robustly extract JSON from a string."""
@@ -101,6 +108,27 @@ CRITICAL RULES:
                 except Exception:
                     continue
         return 1
+
+    def _normalize_food_query(self, name: str) -> str:
+        """Normalize a food name for RAG lookups (handles common aliases)."""
+        text = str(name or "").strip().lower()
+        if not text:
+            return ""
+
+        # Remove punctuation and collapse whitespace.
+        text = re.sub(r"[^a-z0-9\s]+", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+
+        # Citrus aliases → orange (USDA dataset doesn't include separate entries).
+        citrus_aliases = ("tangerine", "mandarin", "clementine", "satsuma")
+        if any(alias in text for alias in citrus_aliases):
+            return "orange"
+
+        # Simple plural handling for common fruits.
+        if text.endswith("s") and text[:-1] in {"orange", "banana", "apple"}:
+            return text[:-1]
+
+        return text
 
     def _build_calorie_breakdown(
         self,
@@ -306,13 +334,335 @@ CRITICAL RULES:
                 elif msg.get("type") == "user_context":
                     user_context_str = msg.get("content", "{}")
         
+        yolo_hints: List[Dict[str, Any]] = []
         vision_info = {}
         if image_path:
-            vision_result = self.gemini_engine.analyze_food(image_path, user_context_str)
+            # Fast local detection hints (YOLO) to help Gemini and provide deterministic fallback.
+            try:
+                detections = self.vision_tool.detect_food(image_path)
+                allow_labels = {
+                    "banana",
+                    "apple",
+                    "orange",
+                    "broccoli",
+                    "carrot",
+                    "pizza",
+                    "donut",
+                    "cake",
+                    "sandwich",
+                    "hot dog",
+                }
+                img: Optional[Image.Image] = None
+                try:
+                    img = Image.open(image_path).convert("RGB")
+                except Exception:
+                    img = None
+
+                def clamp_bbox(bbox: List[float]) -> List[float]:
+                    if not img:
+                        return [float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])]
+                    x1, y1, x2, y2 = (float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3]))
+                    x1 = max(0.0, min(x1, float(img.width - 1)))
+                    y1 = max(0.0, min(y1, float(img.height - 1)))
+                    x2 = max(0.0, min(x2, float(img.width)))
+                    y2 = max(0.0, min(y2, float(img.height)))
+                    if x2 <= x1:
+                        x2 = min(float(img.width), x1 + 1.0)
+                    if y2 <= y1:
+                        y2 = min(float(img.height), y1 + 1.0)
+                    return [x1, y1, x2, y2]
+
+                def mean_rgb(box: List[float]) -> List[float]:
+                    if not img:
+                        return [0.0, 0.0, 0.0]
+                    x1, y1, x2, y2 = map(int, [box[0], box[1], box[2], box[3]])
+                    x1 = max(0, min(x1, img.width - 1))
+                    y1 = max(0, min(y1, img.height - 1))
+                    x2 = max(0, min(x2, img.width))
+                    y2 = max(0, min(y2, img.height))
+                    if x2 <= x1 + 1 or y2 <= y1 + 1:
+                        return [0.0, 0.0, 0.0]
+                    region = img.crop((x1, y1, x2, y2))
+                    stat = ImageStat.Stat(region)
+                    return [float(stat.mean[0]), float(stat.mean[1]), float(stat.mean[2])]
+
+                def rgb_dist(a: List[float], b: List[float]) -> float:
+                    return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2) ** 0.5
+
+                def bbox_iou(a: List[float], b: List[float]) -> float:
+                    ax1, ay1, ax2, ay2 = a
+                    bx1, by1, bx2, by2 = b
+                    inter_w = max(0.0, min(ax2, bx2) - max(ax1, bx1))
+                    inter_h = max(0.0, min(ay2, by2) - max(ay1, by1))
+                    inter = inter_w * inter_h
+                    if inter <= 0:
+                        return 0.0
+                    area_a = max(0.0, (ax2 - ax1)) * max(0.0, (ay2 - ay1))
+                    area_b = max(0.0, (bx2 - bx1)) * max(0.0, (by2 - by1))
+                    union = area_a + area_b - inter
+                    return float(inter / union) if union > 0 else 0.0
+
+                def citrus_like(bbox: List[float]) -> bool:
+                    """Detect orange-like color in inner region."""
+                    if not img:
+                        return False
+                    x1, y1, x2, y2 = bbox
+                    w = max(1.0, x2 - x1)
+                    h = max(1.0, y2 - y1)
+                    inner = [x1 + 0.2 * w, y1 + 0.2 * h, x1 + 0.8 * w, y1 + 0.8 * h]
+                    r, g, b = mean_rgb(inner)
+                    hh, ss, vv = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
+                    return (ss >= 0.25) and (vv >= 0.25) and (0.03 <= hh <= 0.17)
+
+                def donut_like(bbox: List[float]) -> bool:
+                    """Heuristic: donut center resembles background more than ring."""
+                    if not img:
+                        return False
+                    x1, y1, x2, y2 = bbox
+                    w = x2 - x1
+                    h = y2 - y1
+                    if w < 30 or h < 30:
+                        return False
+
+                    th = max(2.0, 0.22 * min(w, h))
+                    ring_boxes = [
+                        [x1, y1, x2, y1 + th],  # top
+                        [x1, y2 - th, x2, y2],  # bottom
+                        [x1, y1 + th, x1 + th, y2 - th],  # left
+                        [x2 - th, y1 + th, x2, y2 - th],  # right
+                    ]
+                    ring_means = [mean_rgb(rb) for rb in ring_boxes]
+                    ring = [sum(m[i] for m in ring_means) / max(1, len(ring_means)) for i in range(3)]
+
+                    center = mean_rgb([x1 + 0.35 * w, y1 + 0.35 * h, x1 + 0.65 * w, y1 + 0.65 * h])
+
+                    pad = max(2.0, 0.15 * min(w, h))
+                    bg_box = [x1, max(0.0, y1 - 2 * pad), x2, max(0.0, y1 - pad)]
+                    if bg_box[3] - bg_box[1] < 5:
+                        bg_box = [x1, min(float(img.height), y2 + pad), x2, min(float(img.height), y2 + 2 * pad)]
+                    bg = mean_rgb(bg_box) if (bg_box[3] - bg_box[1] >= 5) else [255.0, 255.0, 255.0]
+
+                    d_center_bg = rgb_dist(center, bg)
+                    d_center_ring = rgb_dist(center, ring)
+                    d_bg_ring = rgb_dist(bg, ring)
+                    return (d_center_bg < d_center_ring * 0.75) and (d_bg_ring > 12.0)
+
+                processed: List[Dict[str, Any]] = []
+                for det in detections or []:
+                    if not isinstance(det, dict):
+                        continue
+                    label = str(det.get("label") or "").lower().strip()
+                    conf = self._to_float(det.get("confidence"), 0.0)
+                    bbox = det.get("bbox")
+                    if not label or label not in allow_labels or not isinstance(bbox, list) or len(bbox) != 4:
+                        continue
+                    bbox = clamp_bbox(bbox)
+
+                    min_conf = 0.25
+                    if label == "orange":
+                        min_conf = 0.15
+                    if label == "donut":
+                        min_conf = 0.35
+
+                    # Known COCO confusion: oranges/tangerines can be mis-detected as donuts.
+                    if label == "donut" and img is not None:
+                        if not donut_like(bbox) and citrus_like(bbox):
+                            label = "orange"
+                            min_conf = 0.15
+
+                    if conf < min_conf:
+                        # Allow lower confidence for citrus when color strongly matches.
+                        if not (label == "orange" and img is not None and conf >= 0.10 and citrus_like(bbox)):
+                            continue
+
+                    processed.append({"label": label, "confidence": conf, "bbox": bbox})
+
+                # Simple NMS per label to prevent double counting.
+                kept: List[Dict[str, Any]] = []
+                for label in sorted({d["label"] for d in processed}):
+                    dets = [d for d in processed if d["label"] == label]
+                    dets.sort(key=lambda d: float(d.get("confidence") or 0.0), reverse=True)
+                    label_kept: List[Dict[str, Any]] = []
+                    for d in dets:
+                        if all(bbox_iou(d["bbox"], k["bbox"]) < 0.5 for k in label_kept):
+                            label_kept.append(d)
+                    kept.extend(label_kept)
+
+                counts: Dict[str, Dict[str, Any]] = {}
+                for det in kept:
+                    label = str(det.get("label") or "").lower().strip()
+                    conf = self._to_float(det.get("confidence"), 0.0)
+                    if label not in counts:
+                        counts[label] = {"count": 0, "max_confidence": 0.0}
+                    counts[label]["count"] += 1
+                    counts[label]["max_confidence"] = max(counts[label]["max_confidence"], conf)
+
+                yolo_hints = [
+                    {
+                        "label": label,
+                        "count": info["count"],
+                        "max_confidence": round(float(info["max_confidence"]), 3),
+                    }
+                    for label, info in sorted(counts.items())
+                ]
+                if yolo_hints:
+                    logger.info("[NutritionAgent] YOLO food hints: %s", yolo_hints)
+            except Exception as exc:
+                logger.warning("[NutritionAgent] YOLO hint extraction failed: %s", exc)
+
+            vision_result = self.gemini_engine.analyze_food(
+                image_path,
+                user_context_str,
+                object_detections=yolo_hints or None,
+            )
             if "error" not in vision_result:
                 vision_info = vision_result
             else:
                 logger.error(f"[NutritionAgent] Vision analysis failed: {vision_result.get('error')}")
+
+            # Reconcile Gemini output with YOLO hints.
+            # If Gemini is generic/low-confidence, synthesize items from YOLO so common foods
+            # (e.g. bananas) are always named + counted.
+            if yolo_hints:
+                try:
+                    generic_dish_names = {
+                        "meal",
+                        "food",
+                        "unknown meal",
+                        "unknown",
+                        "unknown food",
+                    }
+                    dish_lower = str(vision_info.get("dish_name") or "").strip().lower()
+                    conf = self._to_float(
+                        vision_info.get("confidence_score", vision_info.get("total_confidence", 0.0)),
+                        0.0,
+                    )
+                    items_raw = vision_info.get("items") or []
+                    items_list: List[Dict[str, Any]] = (
+                        [i for i in items_raw if isinstance(i, dict)] if isinstance(items_raw, list) else []
+                    )
+
+                    hint_by_label = {
+                        str(h.get("label") or "").lower().strip(): h for h in yolo_hints if isinstance(h, dict)
+                    }
+
+                    # Fill missing portions/weights for existing items when YOLO knows the count.
+                    default_grams_by_label = {
+                        "banana": 118,
+                        "apple": 182,
+                        "orange": 131,
+                        "broccoli": 91,
+                        "carrot": 61,
+                        "pizza": 285,
+                        "donut": 76,
+                        "cake": 80,
+                        "sandwich": 240,
+                        "hot dog": 100,
+                    }
+
+                    for item in items_list:
+                        raw_name = str(item.get("name") or "")
+                        name_norm = self._normalize_food_query(raw_name)
+                        # Allow substring match: "banana ripe", "orange seedless", etc.
+                        matched_label = next(
+                            (lbl for lbl in hint_by_label.keys() if lbl and (lbl in name_norm or name_norm in lbl)),
+                            None,
+                        )
+                        if not matched_label:
+                            continue
+                        yolo_count = max(1, int(self._to_float(hint_by_label[matched_label].get("count"), 1)))
+
+                        portion_text = str(item.get("portion") or "")
+                        portion_qty = self._parse_quantity(portion_text)
+                        if yolo_count > 1 and portion_qty <= 1:
+                            item["portion"] = f"x{yolo_count}"
+                            portion_qty = yolo_count
+
+                        default_g = float(default_grams_by_label.get(matched_label, 100))
+                        est_g = self._to_float(item.get("estimated_weight_grams"), 0.0)
+                        if est_g <= 0:
+                            item["estimated_weight_grams"] = default_g
+                        else:
+                            # If `portion` is xN, but model provided total grams, convert to per-item.
+                            if portion_qty > 1:
+                                lower = default_g * (portion_qty * 0.8)
+                                upper = default_g * (portion_qty * 1.7)
+                                if lower <= est_g <= upper:
+                                    est_g = est_g / float(portion_qty)
+
+                            # Clamp extreme / implausible per-item weights (common failure: 1310g orange).
+                            max_reasonable = max(600.0, default_g * 3.5)
+                            min_reasonable = default_g * 0.25
+                            if est_g > max_reasonable or est_g < min_reasonable:
+                                est_g = default_g
+
+                            item["estimated_weight_grams"] = round(float(est_g), 1)
+
+                    # Ensure YOLO hint labels are represented in items (helps citrus vs donut confusion).
+                    present_norms = {
+                        self._normalize_food_query(i.get("name", "")) for i in items_list if isinstance(i, dict)
+                    }
+                    for lbl, hint in hint_by_label.items():
+                        if not lbl or lbl in present_norms:
+                            continue
+                        count = max(1, int(self._to_float(hint.get("count"), 1)))
+                        items_list.append(
+                            {
+                                "name": lbl.title(),
+                                "portion": f"x{count}" if count > 1 else "1 item",
+                                "estimated_weight_grams": float(default_grams_by_label.get(lbl, 100)),
+                                "confidence_score": float(self._to_float(hint.get("max_confidence"), 0.6)),
+                                "macros": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0},
+                            }
+                        )
+                        present_norms.add(lbl)
+
+                    # If Gemini picked a label-like dish name that's not supported by YOLO hints, prefer hints.
+                    label_like_dish = dish_lower in set(default_grams_by_label.keys())
+                    if label_like_dish and dish_lower not in hint_by_label and hint_by_label:
+                        best_hint = max(
+                            (h for h in yolo_hints if isinstance(h, dict)),
+                            key=lambda h: float(h.get("max_confidence") or 0.0),
+                        )
+                        best_label = str(best_hint.get("label") or "").strip()
+                        if best_label:
+                            vision_info["dish_name"] = best_label.title()
+
+                    # Persist any appended items back onto vision_info.
+                    vision_info["items"] = items_list
+
+                    # Decide if we should fall back to YOLO-built items.
+                    is_generic = (not items_list) or (dish_lower in generic_dish_names)
+                    is_low_conf = conf > 0 and conf < 0.55
+                    should_fallback = is_generic and (is_low_conf or not items_list)
+
+                    if should_fallback:
+                        fallback_items: List[Dict[str, Any]] = []
+                        for hint in yolo_hints:
+                            label = str(hint.get("label") or "").lower().strip()
+                            if not label:
+                                continue
+                            count = max(1, int(self._to_float(hint.get("count"), 1)))
+                            fallback_items.append(
+                                {
+                                    "name": label.title(),
+                                    "portion": f"x{count}" if count > 1 else "1 item",
+                                    "estimated_weight_grams": float(default_grams_by_label.get(label, 100)),
+                                    "confidence_score": float(self._to_float(hint.get("max_confidence"), 0.6)),
+                                    "macros": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0},
+                                }
+                            )
+
+                        if fallback_items:
+                            vision_info["items"] = fallback_items
+                            if dish_lower in generic_dish_names or not dish_lower:
+                                vision_info["dish_name"] = fallback_items[0].get("name", "Meal")
+                            vision_info["notes"] = (
+                                (str(vision_info.get("notes") or "") + " | " if vision_info.get("notes") else "")
+                                + "Gemini vision was generic/low-confidence; items reconstructed from YOLO hints."
+                            )
+                except Exception as exc:
+                    logger.warning("[NutritionAgent] YOLO reconciliation failed: %s", exc)
         
         # Phase 11: RAG Grounding
         rag_matches = []
@@ -321,13 +671,14 @@ CRITICAL RULES:
             items = [{"name": vision_info["dish_name"], "portion": "1 serving"}]
             
         for item in items:
-            name = item.get("name", "")
-            match = self.rag.search_food(name)
+            raw_name = item.get("name", "")
+            query_name = self._normalize_food_query(raw_name)
+            match = self.rag.search_food(query_name)
             if match:
-                match["original_item"] = name
+                match["original_item"] = raw_name
                 match["estimated_portion"] = item.get("portion", "unknown")
                 rag_matches.append(match)
-                logger.info(f"[NutritionAgent] RAG Match Found: {match['name']} for {name}")
+                logger.info(f"[NutritionAgent] RAG Match Found: {match['name']} for {raw_name}")
 
         # Final Synthesis Prompt
         synthesis_input = f"""

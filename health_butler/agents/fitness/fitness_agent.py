@@ -32,10 +32,8 @@ class FitnessAgent(BaseAgent):
     def __init__(self):
         # Inject profile into system prompt
         profile_str = "\n".join([f"- {k}: {v}" for k, v in MOCK_USER_PROFILE.items()])
-        
-        super().__init__(
-            role="fitness",
-            system_prompt="""You are an expert Fitness Coach and Wellness Assistant.
+
+        base_prompt = """You are an expert Fitness Coach and Wellness Assistant.
 Your goal is to provide safe, actionable exercise advice.
 
 OUTPUT FORMAT:
@@ -57,7 +55,17 @@ You MUST return a valid JSON object with the following structure:
 SAFETY POLICY:
 - If a user has a condition (e.g., Knee Injury), NEVER suggest high-impact movements.
 - Prioritize the "Safe Exercises" provided in the context.
-            """,
+"""
+
+        system_prompt = (
+            base_prompt
+            + "\n\nDEFAULT USER PROFILE (for prototype/testing; may be overridden by context):\n"
+            + profile_str
+        )
+
+        super().__init__(
+            role="fitness",
+            system_prompt=system_prompt,
             use_openai_api=False
         )
         self.rag = SimpleRagTool()
@@ -181,11 +189,15 @@ SAFETY POLICY:
         bmr = self._calculate_bmr(user_profile)
         calorie_status = self._determine_calorie_status(bmr, nutrition_info)
         bmi = self._calculate_bmi(user_profile)
+        nutrition_snippet = nutrition_info or ""
+        if len(nutrition_snippet) > 1500:
+            nutrition_snippet = nutrition_snippet[:1500] + "...(truncated)"
         
         # 4. Build Dynamic Prompt Supplement
         dynamic_context = f"""
 USER PROFILE: BMI {bmi}, Calorie Maintenance {round(bmr)} kcal, Conditions: {health_conditions}.
 CALORIE STATUS: {calorie_status}.
+RELEVANT NUTRITION DATA: {nutrition_snippet}
 RAG SAFE EXERCISES: {safe_ex_list}.
 RAG SAFETY WARNINGS: {warnings}.
 """
@@ -207,9 +219,23 @@ RAG SAFETY WARNINGS: {warnings}.
             return clean_str
         except Exception as e:
             logger.error(f"[FitnessAgent] Failed to parse structured output: {e}. Raw: {result_str}")
-            return json.dumps({
-                "summary": "Stay active safely!",
-                "recommendations": [{"name": "Walking", "duration_min": 20, "kcal_estimate": 80, "reason": "General mobility"}],
-                "safety_warnings": ["Consult a professional."],
-                "avoid": []
-            })
+            raw = (result_str or "").strip()
+            # If the model returned plain text (common during dev/mocked tests), return it directly.
+            if raw:
+                return raw
+            # Otherwise return a minimal safe JSON payload.
+            return json.dumps(
+                {
+                    "summary": "Stay active safely!",
+                    "recommendations": [
+                        {
+                            "name": "Walking",
+                            "duration_min": 20,
+                            "kcal_estimate": 80,
+                            "reason": "General mobility",
+                        }
+                    ],
+                    "safety_warnings": ["Consult a professional."],
+                    "avoid": [],
+                }
+            )

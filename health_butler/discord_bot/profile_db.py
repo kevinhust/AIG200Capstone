@@ -8,9 +8,13 @@ Provides persistent storage for:
 
 import os
 import json
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Any as _Any
 from datetime import date, datetime
-from supabase import create_client, Client
+try:
+    from supabase import create_client, Client  # type: ignore
+except Exception:  # pragma: no cover
+    create_client = None  # type: ignore
+    Client = _Any  # type: ignore
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -21,6 +25,8 @@ class ProfileDB:
 
     def __init__(self):
         """Initialize Supabase client from environment variables."""
+        if create_client is None:
+            raise RuntimeError("supabase package is not installed")
         self.url: str = os.getenv("SUPABASE_URL", "")
         self.key: str = (
             os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -236,6 +242,47 @@ class ProfileDB:
             "total_fat": sum(m.get("fat_g", 0) for m in meals if m.get("fat_g"))
         }
         return stats
+
+    def update_meal(self, meal_id: str, **updates) -> Optional[Dict[str, Any]]:
+        """Update a meal record by primary key `id`.
+
+        Note: Schema is expected to include `meals.id`. If not present, this will fail.
+        """
+        response = self.client.table("meals").update(updates).eq("id", meal_id).execute()
+        return response.data[0] if response.data else None
+
+    def delete_meal(self, meal_id: str) -> bool:
+        """Delete a meal record by primary key `id`."""
+        response = self.client.table("meals").delete().eq("id", meal_id).execute()
+        # Supabase returns deleted rows in `data` for delete. Treat any successful execute as True.
+        return response is not None
+
+    def recompute_daily_log_from_meals(self, discord_user_id: str, log_date: date) -> Optional[Dict[str, Any]]:
+        """Recompute a day's totals from `meals` and upsert into `daily_logs`.
+
+        This keeps `daily_logs` consistent when meals are added/edited/deleted.
+        """
+        start = datetime.combine(log_date, datetime.min.time()).isoformat()
+        end = datetime.combine(log_date, datetime.max.time()).isoformat()
+
+        response = (
+            self.client.table("meals")
+            .select("calories,protein_g,carbs_g,fat_g,created_at")
+            .eq("user_id", discord_user_id)
+            .gte("created_at", start)
+            .lte("created_at", end)
+            .execute()
+        )
+        meals = response.data or []
+        total_calories = sum(float(m.get("calories", 0) or 0) for m in meals)
+        total_protein = sum(float(m.get("protein_g", 0) or 0) for m in meals)
+
+        return self.create_daily_log(
+            discord_user_id=discord_user_id,
+            log_date=log_date,
+            calories_intake=total_calories,
+            protein_g=total_protein,
+        )
 
     def get_chat_history(self, discord_user_id: str, limit: int = 20) -> List[Dict[str, Any]]:
         """Get recent chat messages for a user."""

@@ -11,6 +11,7 @@ import os
 import json
 from json import JSONDecoder
 import re
+import uuid
 from datetime import datetime, time
 from typing import Optional, List, Dict, Any
 from zoneinfo import ZoneInfo
@@ -50,6 +51,125 @@ profile_db: Optional[ProfileDB] = None
 
 # In-memory cache for user profiles (synced with Supabase)
 _user_profiles_cache: Dict[str, Dict[str, Any]] = {}  # user_id -> profile
+
+
+def _parse_int_set(value: Optional[str]) -> set[int]:
+    items: set[int] = set()
+    for part in (value or "").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            items.add(int(part))
+        except Exception:
+            continue
+    return items
+
+
+def _is_profile_query(text_lower: str) -> bool:
+    """Return True when the user is asking about their own profile/identity."""
+    text_lower = (text_lower or "").strip().lower()
+    if not text_lower:
+        return False
+    patterns = [
+        r"\bwho\s*am\s*i\b",
+        r"\bwhoami\b",
+        r"\bmy\s+profile\b",
+        r"\bshow\s+(me\s+)?(my\s+)?profile\b",
+        r"\b(profile|stats|metrics)\b\s*\??$",
+        r"\bwhat('?s| is)\s+my\s+(name|age|height|weight|goal|goals|diet|conditions|activity|preferences)\b",
+        r"\bmy\s+(name|age|height|weight|goal|goals|diet|conditions|activity|preferences)\b\s*\??$",
+        r"\b(daily\s+)?calorie\s+target\b",
+        r"\btarget\s+calories\b",
+        r"\bdaily\s+target\b",
+    ]
+    return any(re.search(p, text_lower) for p in patterns)
+
+
+def _is_daily_summary_query(text_lower: str) -> bool:
+    text_lower = (text_lower or "").strip().lower()
+    if not text_lower:
+        return False
+    if re.search(r"\b(summary|stats)\b\s*\??$", text_lower):
+        return True
+    if re.search(r"\b(today|todays|today's)\b.*\b(summary|stats|log|intake)\b", text_lower):
+        return True
+    if "today" in text_lower and any(
+        k in text_lower for k in ("calorie", "calories", "kcal", "protein", "carb", "fat", "meals")
+    ):
+        return True
+    return False
+
+
+def _is_help_query(text_lower: str) -> bool:
+    text_lower = (text_lower or "").strip().lower()
+    if not text_lower:
+        return False
+    return any(
+        phrase in text_lower
+        for phrase in (
+            "help",
+            "commands",
+            "what can you do",
+            "how do i",
+            "how to",
+            "usage",
+        )
+    )
+
+
+def _looks_health_related(text_lower: str) -> bool:
+    """Quick filter to prevent routing random chat to specialist agents."""
+    text_lower = (text_lower or "").strip().lower()
+    if not text_lower:
+        return False
+    nutrition_keywords = (
+        "food",
+        "eat",
+        "ate",
+        "meal",
+        "calorie",
+        "calories",
+        "macro",
+        "macros",
+        "protein",
+        "carb",
+        "fat",
+        "diet",
+        "nutrition",
+        "ingredients",
+        "recipe",
+    )
+    fitness_keywords = (
+        "workout",
+        "exercise",
+        "fitness",
+        "gym",
+        "run",
+        "walk",
+        "steps",
+        "train",
+        "cardio",
+        "strength",
+        "stretch",
+        "yoga",
+        "bmi",
+        "weight loss",
+        "gain muscle",
+        "health",
+        "healthy",
+        "injury",
+        "pain",
+        "sleep",
+        "stress",
+        "blood pressure",
+        "hypertension",
+        "diabetes",
+        "cholesterol",
+    )
+    return any(k in text_lower for k in nutrition_keywords) or any(
+        k in text_lower for k in fitness_keywords
+    )
 
 
 def get_user_profile(user_id: str) -> Dict[str, Any]:
@@ -129,22 +249,47 @@ def save_user_profile(user_id: str, profile: Dict[str, Any]) -> bool:
             "preferences_json": normalized_profile["preferences"],
         }
 
-        if existing:
-            profile_db.update_profile(user_id, **profile_data)
-        else:
-            profile_db.create_profile(
-                discord_user_id=user_id,
-                full_name=normalized_profile["name"],
-                age=normalized_profile["age"],
-                gender=normalized_profile["gender"],
-                height_cm=normalized_profile["height"],
-                weight_kg=normalized_profile["weight"],
-                goal=normalized_profile["goal"],
-                conditions=conditions,
-                activity=normalized_profile["activity"],
-                diet=diet_list,
-                preferences=normalized_profile["preferences"],
-            )
+        try:
+            if existing:
+                profile_db.update_profile(user_id, **profile_data)
+            else:
+                profile_db.create_profile(
+                    discord_user_id=user_id,
+                    full_name=normalized_profile["name"],
+                    age=normalized_profile["age"],
+                    gender=normalized_profile["gender"],
+                    height_cm=normalized_profile["height"],
+                    weight_kg=normalized_profile["weight"],
+                    goal=normalized_profile["goal"],
+                    conditions=conditions,
+                    activity=normalized_profile["activity"],
+                    diet=diet_list,
+                    preferences=normalized_profile["preferences"],
+                )
+        except Exception as exc:
+            # Backwards-compatible retry when an older Supabase schema is missing `preferences_json`.
+            if "preferences_json" in str(exc).lower():
+                logger.warning("Retrying profile save without preferences_json column...")
+                if existing:
+                    fallback_data = dict(profile_data)
+                    fallback_data.pop("preferences_json", None)
+                    profile_db.update_profile(user_id, **fallback_data)
+                else:
+                    profile_db.create_profile(
+                        discord_user_id=user_id,
+                        full_name=normalized_profile["name"],
+                        age=normalized_profile["age"],
+                        gender=normalized_profile["gender"],
+                        height_cm=normalized_profile["height"],
+                        weight_kg=normalized_profile["weight"],
+                        goal=normalized_profile["goal"],
+                        conditions=conditions,
+                        activity=normalized_profile["activity"],
+                        diet=diet_list,
+                        preferences=None,
+                    )
+            else:
+                raise
 
         # Update cache
         _user_profiles_cache[user_id] = normalized_profile
@@ -323,11 +468,339 @@ class LogWorkoutView(discord.ui.View):
         await interaction.response.send_message(msg, ephemeral=True)
 
 
+def _apply_serving_multiplier(nutrition_payload: Dict[str, Any], multiplier: float, dish_override: Optional[str] = None) -> Dict[str, Any]:
+    """Scale a nutrition payload in-place (and return it) by a serving multiplier.
+
+    Bullet-proof behavior:
+    - Supports repeated updates (e.g. 1 → 2 → 1) without compounding.
+    - Uses `serving_multiplier` already stored on the payload to compute a ratio.
+    """
+    try:
+        m = float(multiplier or 1.0)
+    except Exception:
+        m = 1.0
+    if m <= 0:
+        m = 1.0
+
+    try:
+        prev = float(nutrition_payload.get("serving_multiplier", 1.0) or 1.0)
+    except Exception:
+        prev = 1.0
+    if prev <= 0:
+        prev = 1.0
+
+    ratio = m / prev
+
+    if dish_override:
+        nutrition_payload["dish_name"] = str(dish_override).strip() or nutrition_payload.get("dish_name")
+
+    macros = nutrition_payload.get("total_macros", {}) or {}
+    if isinstance(macros, dict):
+        for key in ("calories", "protein", "carbs", "fat"):
+            try:
+                macros[key] = round(float(macros.get(key, 0) or 0) * ratio, 1)
+            except Exception:
+                continue
+        nutrition_payload["total_macros"] = macros
+
+    # Keep the per-item breakdown internally consistent by scaling each/total.
+    rows = nutrition_payload.get("calorie_breakdown", []) or []
+    if isinstance(rows, list):
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            for k in ("calories_each", "calories_total"):
+                try:
+                    row[k] = round(float(row.get(k, 0) or 0) * ratio, 1)
+                except Exception:
+                    continue
+
+    nutrition_payload["serving_multiplier"] = round(m, 3)
+    return nutrition_payload
+
+
+class MealServingAdjustModal(discord.ui.Modal, title="Adjust Serving"):
+    """Modal to adjust the serving multiplier for a scanned meal."""
+
+    multiplier = discord.ui.TextInput(
+        label="Serving multiplier (e.g., 0.5, 1, 2)",
+        placeholder="1",
+        min_length=1,
+        max_length=8,
+    )
+    dish_name = discord.ui.TextInput(
+        label="Dish name override (optional)",
+        placeholder="leave blank",
+        required=False,
+        min_length=0,
+        max_length=80,
+    )
+
+    def __init__(self, view: "MealLogView"):
+        # In unit tests, there may be no running event loop; skip discord.py init.
+        self._view = view
+        try:
+            super().__init__()
+        except RuntimeError:
+            # Stubs/tests: inputs may be replaced manually.
+            pass
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Owner-only
+        if str(interaction.user.id) != str(self._view.user_id):
+            return await interaction.response.send_message("This meal is for someone else.", ephemeral=True)
+
+        raw = str(getattr(self.multiplier, "value", "") or "").strip()
+        try:
+            m = float(raw)
+        except Exception:
+            return await interaction.response.send_message("Please enter a valid number (e.g., 0.5, 1, 2).", ephemeral=True)
+
+        if m <= 0 or m > 10:
+            return await interaction.response.send_message("Multiplier must be between 0 and 10.", ephemeral=True)
+
+        dish_override = str(getattr(self.dish_name, "value", "") or "").strip()
+        await self._view.apply_multiplier(interaction, m, dish_override=dish_override or None)
+
+
+class MealLogView(discord.ui.View):
+    """Interactive controls to add/remove/adjust a scanned meal in daily totals."""
+
+    def __init__(
+        self,
+        bot: "HealthButlerDiscordBot",
+        *,
+        user_id: str,
+        nutrition_payload: Dict[str, Any],
+        logged_meal: Optional[Dict[str, Any]] = None,
+    ):
+        self.bot = bot
+        self.user_id = str(user_id)
+        self.nutrition_payload = nutrition_payload
+        self.logged_meal = logged_meal or None
+
+        try:
+            super().__init__(timeout=3600)
+        except RuntimeError:
+            # Unit tests / stubs: allow construction without a running loop.
+            pass
+
+        self._sync_button_states()
+
+    def _sync_button_states(self) -> None:
+        """Enable/disable buttons based on logged state (best-effort)."""
+        try:
+            logged = self._is_logged()
+            for item in getattr(self, "children", []) or []:
+                if getattr(item, "label", None) == "Add to Today":
+                    item.disabled = bool(logged)
+                elif getattr(item, "label", None) == "Remove from Today":
+                    item.disabled = not bool(logged)
+        except Exception:
+            pass
+
+    def _is_logged(self) -> bool:
+        return bool(self.logged_meal and self.logged_meal.get("meal_id"))
+
+    async def _refresh_message_embed(self, interaction: discord.Interaction) -> None:
+        """Rebuild and edit the nutrition embed to reflect current payload."""
+        embed = self.bot._build_nutrition_embed(self.nutrition_payload)
+        # Add a small status marker
+        if self._is_logged():
+            embed.title = "✅ " + (embed.title or "Nutrition Analysis")
+        else:
+            embed.title = "📝 " + (embed.title or "Nutrition Analysis")
+            embed.set_footer(text=(embed.footer.text + " • Not logged yet") if embed.footer and embed.footer.text else "Not logged yet")
+        self._sync_button_states()
+        await interaction.message.edit(embed=embed, view=self)
+
+    async def apply_multiplier(self, interaction: discord.Interaction, multiplier: float, *, dish_override: Optional[str] = None) -> None:
+        """Apply serving multiplier to payload and persist update if logged."""
+        # Update local payload
+        _apply_serving_multiplier(self.nutrition_payload, multiplier, dish_override=dish_override)
+
+        meal_id = str((self.logged_meal or {}).get("meal_id") or "")
+
+        # If already logged, update the correct storage backend.
+        if self._is_logged():
+            global demo_mode, _demo_user_profile, demo_user_id
+
+            # Demo-mode meals are in-memory only (never touch Supabase with demo-* IDs).
+            if demo_mode and str(self.user_id) == str(demo_user_id) and meal_id.startswith("demo-"):
+                try:
+                    macros = dict(self.nutrition_payload.get("total_macros", {}) or {})
+                    # Update the canonical meal record stored in demo profile
+                    meals = _demo_user_profile.get(self.user_id, {}).get("meals", []) or []
+                    for m in meals:
+                        if str(m.get("meal_id")) == meal_id:
+                            m["dish"] = self.nutrition_payload.get("dish_name", m.get("dish"))
+                            m["macros"] = macros
+                            break
+                    # Keep view state consistent
+                    if isinstance(self.logged_meal, dict):
+                        self.logged_meal["dish"] = self.nutrition_payload.get("dish_name", self.logged_meal.get("dish"))
+                        self.logged_meal["macros"] = macros
+                except Exception:
+                    pass
+
+            # Persisted meal: update Supabase and recompute daily totals.
+            elif profile_db and meal_id and not meal_id.startswith("demo-"):
+                try:
+                    macros = self.nutrition_payload.get("total_macros", {}) or {}
+                    profile_db.update_meal(
+                        meal_id,
+                        dish_name=self.nutrition_payload.get("dish_name"),
+                        calories=float(macros.get("calories", 0) or 0),
+                        protein_g=float(macros.get("protein", 0) or 0),
+                        carbs_g=float(macros.get("carbs", 0) or 0),
+                        fat_g=float(macros.get("fat", 0) or 0),
+                    )
+                    try:
+                        from datetime import date
+
+                        profile_db.recompute_daily_log_from_meals(self.user_id, date.today())
+                    except Exception:
+                        pass
+                except Exception as exc:
+                    return await interaction.response.send_message(f"Failed to update meal: {exc}", ephemeral=True)
+
+        await interaction.response.send_message("✅ Updated serving size.", ephemeral=True)
+        await self._refresh_message_embed(interaction)
+        await self.bot._send_daily_summary_embed(interaction.channel, self.user_id)
+
+    def _build_meal_record(self) -> Dict[str, Any]:
+        macros = self.nutrition_payload.get("total_macros", {}) or {}
+        return {
+            "time": datetime.now(LOCAL_TZ).strftime("%H:%M"),
+            "dish": self.nutrition_payload.get("dish_name", "Meal"),
+            "macros": {
+                "calories": float(macros.get("calories", 0) or 0),
+                "protein": float(macros.get("protein", 0) or 0),
+                "carbs": float(macros.get("carbs", 0) or 0),
+                "fat": float(macros.get("fat", 0) or 0),
+            },
+        }
+
+    def _cache_add(self, record: Dict[str, Any]) -> None:
+        try:
+            if self.user_id in _user_profiles_cache:
+                _user_profiles_cache[self.user_id].setdefault("meals", []).append(
+                    {
+                        "meal_id": record.get("meal_id"),
+                        "time": record.get("time"),
+                        "dish": record.get("dish"),
+                        "macros": record.get("macros"),
+                    }
+                )
+        except Exception:
+            pass
+
+    def _cache_remove(self, meal_id: str) -> None:
+        try:
+            if self.user_id in _user_profiles_cache:
+                meals = _user_profiles_cache[self.user_id].get("meals", []) or []
+                _user_profiles_cache[self.user_id]["meals"] = [m for m in meals if str(m.get("meal_id")) != str(meal_id)]
+        except Exception:
+            pass
+
+    @discord.ui.button(label="Add to Today", style=discord.ButtonStyle.green, emoji="✅")
+    async def add_to_today(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if str(interaction.user.id) != str(self.user_id):
+            return await interaction.response.send_message("This meal is for someone else.", ephemeral=True)
+
+        if self._is_logged():
+            return await interaction.response.send_message("Already logged.", ephemeral=True)
+
+        record = self._build_meal_record()
+
+        global demo_mode, _demo_user_profile, demo_user_id
+        if demo_mode and str(self.user_id) == str(demo_user_id):
+            # In-memory log
+            record["meal_id"] = f"demo-{uuid.uuid4().hex[:10]}"
+            _demo_user_profile.setdefault(self.user_id, {"meals": []}).setdefault("meals", []).append(record)
+            self.logged_meal = record
+        elif profile_db:
+            try:
+                created = profile_db.create_meal(
+                    discord_user_id=self.user_id,
+                    dish_name=record["dish"],
+                    calories=record["macros"]["calories"],
+                    protein_g=record["macros"]["protein"],
+                    carbs_g=record["macros"]["carbs"],
+                    fat_g=record["macros"]["fat"],
+                    confidence_score=float(self.nutrition_payload.get("confidence_score", 0.0) or 0.0),
+                )
+                meal_id = (created or {}).get("id")
+                record["meal_id"] = meal_id or f"db-unknown-{uuid.uuid4().hex[:10]}"
+                self.logged_meal = record
+                try:
+                    from datetime import date
+
+                    profile_db.recompute_daily_log_from_meals(self.user_id, date.today())
+                except Exception:
+                    pass
+            except Exception as exc:
+                return await interaction.response.send_message(f"Failed to log meal: {exc}", ephemeral=True)
+        else:
+            return await interaction.response.send_message("Database not connected; cannot log meals right now.", ephemeral=True)
+
+        self._cache_add(record)
+        await interaction.response.send_message("✅ Added to your daily total.", ephemeral=True)
+        await self._refresh_message_embed(interaction)
+        await self.bot._send_daily_summary_embed(interaction.channel, self.user_id)
+
+    @discord.ui.button(label="Adjust Serving", style=discord.ButtonStyle.gray, emoji="✏️")
+    async def adjust_serving(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if str(interaction.user.id) != str(self.user_id):
+            return await interaction.response.send_message("This meal is for someone else.", ephemeral=True)
+        await interaction.response.send_modal(MealServingAdjustModal(self))
+
+    @discord.ui.button(label="Remove from Today", style=discord.ButtonStyle.red, emoji="🗑️")
+    async def remove_from_today(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if str(interaction.user.id) != str(self.user_id):
+            return await interaction.response.send_message("This meal is for someone else.", ephemeral=True)
+
+        if not self._is_logged():
+            return await interaction.response.send_message("This scan isn't logged yet.", ephemeral=True)
+
+        meal_id = str(self.logged_meal.get("meal_id"))
+        global demo_mode, _demo_user_profile, demo_user_id
+
+        if demo_mode and str(self.user_id) == str(demo_user_id):
+            meals = _demo_user_profile.get(self.user_id, {}).get("meals", []) or []
+            _demo_user_profile[self.user_id]["meals"] = [m for m in meals if str(m.get("meal_id")) != meal_id]
+        elif profile_db:
+            try:
+                profile_db.delete_meal(meal_id)
+                try:
+                    from datetime import date
+
+                    profile_db.recompute_daily_log_from_meals(self.user_id, date.today())
+                except Exception:
+                    pass
+            except Exception as exc:
+                return await interaction.response.send_message(f"Failed to remove meal: {exc}", ephemeral=True)
+        else:
+            return await interaction.response.send_message("Database not connected; cannot remove meals right now.", ephemeral=True)
+
+        self._cache_remove(meal_id)
+        self.logged_meal = None
+        await interaction.response.send_message("🗑️ Removed from your daily total.", ephemeral=True)
+        await self._refresh_message_embed(interaction)
+        await self.bot._send_daily_summary_embed(interaction.channel, self.user_id)
+
+
 class DietSelectView(discord.ui.View):
     """Step 5: Dietary Preferences Multi-Select View"""
     def __init__(self, user_id):
-        super().__init__(timeout=300)
         self.user_id = user_id
+        # In unit tests, there may be no running event loop; discord.py View init
+        # would raise. Skip initialization in that case since tests call callbacks
+        # directly without relying on UI internals.
+        try:
+            super().__init__(timeout=300)
+        except RuntimeError:
+            pass
 
     @discord.ui.select(
         placeholder="Select Dietary Preferences...",
@@ -573,8 +1046,24 @@ class PersonalizationModal(discord.ui.Modal, title='Step 6/6: Personalization Si
     )
 
     def __init__(self, user_id: str):
-        super().__init__()
         self.user_id = user_id
+        # In unit tests, there may be no running event loop; discord.py Modal/View init
+        # would raise. Skip initialization in that case (tests set input values manually).
+        try:
+            super().__init__()
+        except RuntimeError:
+            # Ensure inputs exist as instance attrs for tests.
+            self.sleep_hours = getattr(self, "sleep_hours", discord.ui.TextInput(label="Average Sleep Hours"))
+            self.stress_level = getattr(self, "stress_level", discord.ui.TextInput(label="Stress Level (1-10)"))
+            self.workout_days_per_week = getattr(
+                self, "workout_days_per_week", discord.ui.TextInput(label="Workout Days Per Week (1-7)")
+            )
+            self.session_minutes = getattr(
+                self, "session_minutes", discord.ui.TextInput(label="Preferred Session Minutes (10-180)")
+            )
+            self.motivation_style = getattr(
+                self, "motivation_style", discord.ui.TextInput(label="Motivation Style (gentle/balanced/strict)")
+            )
 
     async def on_submit(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
@@ -682,6 +1171,9 @@ class HealthButlerDiscordBot(Client):
 
         self.swarm = HealthSwarm(verbose=True)
         self.start_time = datetime.now()
+        # Optional demo safety allowlists (comma-separated IDs). Empty => allow all.
+        self.allowed_user_ids = _parse_int_set(os.getenv("DISCORD_ALLOWED_USER_IDS"))
+        self.allowed_channel_ids = _parse_int_set(os.getenv("DISCORD_ALLOWED_CHANNEL_IDS"))
         logger.info("Health Butler Discord Bot initialized")
 
     @tasks.loop(time=[time(7, 30, tzinfo=LOCAL_TZ), time(20, 0, tzinfo=LOCAL_TZ)])
@@ -743,6 +1235,12 @@ class HealthButlerDiscordBot(Client):
         global demo_mode, demo_user_id
         if message.author.bot or not message.guild: return
 
+        # Optional allowlists for demo safety (empty allowlist => allow all)
+        if self.allowed_user_ids and message.author.id not in self.allowed_user_ids:
+            return
+        if self.allowed_channel_ids and message.channel.id not in self.allowed_channel_ids:
+            return
+
         self._persist_chat_message(str(message.author.id), "user", message.content)
 
         # Helper for user_id in later scopes
@@ -765,6 +1263,28 @@ class HealthButlerDiscordBot(Client):
         user_profile = _demo_user_profile.get(author_id) or persisted_profile or {"meals": []}
         if "meals" not in user_profile:
             user_profile["meals"] = []
+
+        # Quick intent shortcuts to avoid misrouting random/meta queries to Nutrition.
+        content_lower = (message.content or "").strip().lower()
+        if not message.attachments:
+            if _is_profile_query(content_lower):
+                await self._send_user_profile_embed(message.channel, author_id, user_profile)
+                await self._send_daily_summary_embed(message.channel, author_id)
+                return
+
+            if _is_daily_summary_query(content_lower):
+                await self._send_daily_summary_embed(message.channel, author_id)
+                return
+
+            if _is_help_query(content_lower) or not _looks_health_related(content_lower):
+                await message.channel.send(
+                    "I can help with **nutrition** (meal photos, calories, macros) and **fitness** (workouts, goals).\n"
+                    "- Upload a food photo to get a nutrition analysis.\n"
+                    "- Ask: \"Give me a 20-minute beginner workout at home\".\n"
+                    "- Ask: \"Who am I?\" to view your saved profile.\n"
+                    "If you haven't onboarded yet, run `/demo` to register."
+                )
+                return
 
         try:
             image_attachment = next((a for a in message.attachments if a.content_type and a.content_type.startswith('image/')), None)
@@ -804,16 +1324,45 @@ class HealthButlerDiscordBot(Client):
                         user_context=user_context
                     )
 
-                # Persist Meal data using the structured response
-                latest_meal = await self._persist_meal_data(result['response'], str(message.author.id))
+                # Persist scanned meals only (image uploads). Text-only nutrition queries should NOT
+                # auto-affect consumed totals.
+                latest_meal = None
+                if image_attachment:
+                    try:
+                        parsed = self._extract_json_payload(result.get("response") or "")
+                        macros = (parsed or {}).get("total_macros", {}) if isinstance(parsed, dict) else {}
+                        calories = self._to_float(macros.get("calories", 0), 0.0)
+                        confidence = self._to_float(
+                            (parsed or {}).get("confidence_score", (parsed or {}).get("total_confidence", 0.0)),
+                            0.0,
+                        )
+                        # Avoid logging "no food detected" / 0-kcal scans automatically.
+                        if calories > 0 and confidence >= 0.10:
+                            latest_meal = await self._persist_meal_data(result["response"], str(message.author.id))
+                    except Exception:
+                        latest_meal = None
 
-                await self._send_swarmed_response(message.channel, result['response'], str(message.author.id), latest_meal=latest_meal)
+                await self._send_swarmed_response(
+                    message.channel,
+                    result["response"],
+                    str(message.author.id),
+                    latest_meal=latest_meal,
+                    scan_mode=bool(image_attachment),
+                )
 
         except Exception as e:
             logger.error(f"Error: {e}")
             await message.channel.send(f"⚠️ Error: {str(e)}")
 
-    async def _send_swarmed_response(self, channel, response: str, interaction_user_id: str, latest_meal: Optional[Dict[str, Any]] = None):
+    async def _send_swarmed_response(
+        self,
+        channel,
+        response: str,
+        interaction_user_id: str,
+        latest_meal: Optional[Dict[str, Any]] = None,
+        *,
+        scan_mode: bool = False,
+    ):
         try:
             clean_str = response.strip()
             self._persist_chat_message(str(interaction_user_id), "assistant", clean_str)
@@ -824,7 +1373,28 @@ class HealthButlerDiscordBot(Client):
                 # Check if it's a Nutrition analysis
                 if "dish_name" in data and "total_macros" in data:
                     embed = self._build_nutrition_embed(data)
-                    await channel.send(embed=embed)
+                    view = None
+                    if scan_mode:
+                        view = MealLogView(
+                            self,
+                            user_id=str(interaction_user_id),
+                            nutrition_payload=data,
+                            logged_meal=latest_meal,
+                        )
+                        # Add a visible status marker at send-time (so user doesn't need to click).
+                        if latest_meal and latest_meal.get("meal_id"):
+                            embed.title = "✅ " + (embed.title or "Nutrition Analysis")
+                        else:
+                            embed.title = "📝 " + (embed.title or "Nutrition Analysis")
+                            if embed.footer and embed.footer.text:
+                                embed.set_footer(text=embed.footer.text + " • Not logged yet")
+                            else:
+                                embed.set_footer(text="Not logged yet")
+
+                    if view:
+                        await channel.send(embed=embed, view=view)
+                    else:
+                        await channel.send(embed=embed)
                 elif "summary" in data and "recommendations" in data:
                     embed = self._build_fitness_embed(data)
                     await self._persist_fitness_plan(data, interaction_user_id)
@@ -852,6 +1422,86 @@ class HealthButlerDiscordBot(Client):
         except Exception as e:
             logger.error(f"Response handling error: {e}")
             await channel.send(f"⚠️ Error processing response: {str(e)[:100]}")
+
+    async def _send_user_profile_embed(self, channel, user_id: str, profile: Dict[str, Any]) -> None:
+        """Send a profile summary embed (no agent routing)."""
+        # Basic existence check
+        has_any = any(
+            profile.get(k)
+            for k in (
+                "name",
+                "age",
+                "gender",
+                "height",
+                "height_cm",
+                "weight",
+                "weight_kg",
+                "goal",
+                "activity",
+                "diet",
+                "conditions",
+                "preferences",
+            )
+        )
+        if not has_any or profile == {"meals": []}:
+            await channel.send("⚠️ I don't have a saved profile for you yet. Run `/demo` to register.")
+            return
+
+        name = profile.get("name") or "Not provided"
+        age = profile.get("age", "N/A")
+        gender = profile.get("gender", "N/A")
+        height = profile.get("height", profile.get("height_cm", "N/A"))
+        weight = profile.get("weight", profile.get("weight_kg", "N/A"))
+        goal = profile.get("goal", "General Health")
+        activity = profile.get("activity", "Moderately Active")
+        diet = profile.get("diet", [])
+        conditions = profile.get("conditions", [])
+        prefs = profile.get("preferences", {}) if isinstance(profile.get("preferences"), dict) else {}
+
+        # Determine persistence status
+        saved = False
+        try:
+            global profile_db
+            if profile_db and profile_db.get_profile(str(user_id)):
+                saved = True
+        except Exception:
+            saved = False
+
+        embed = Embed(title="👤 Your Profile", color=discord.Color.blurple())
+        embed.add_field(name="Name", value=str(name), inline=True)
+        embed.add_field(name="Age / Gender", value=f"{age} / {gender}", inline=True)
+        embed.add_field(name="Metrics", value=f"{height} cm / {weight} kg", inline=False)
+        embed.add_field(name="Goal", value=str(goal), inline=True)
+        embed.add_field(name="Activity", value=str(activity), inline=True)
+        embed.add_field(
+            name="Conditions",
+            value=", ".join(conditions) if conditions else "None",
+            inline=False,
+        )
+        embed.add_field(
+            name="Diet",
+            value=", ".join(diet) if isinstance(diet, list) and diet else "None",
+            inline=False,
+        )
+        if prefs:
+            pref_lines = []
+            if "sleep_hours" in prefs:
+                pref_lines.append(f"Sleep: {prefs.get('sleep_hours')}h")
+            if "stress_level" in prefs:
+                pref_lines.append(f"Stress: {prefs.get('stress_level')}/10")
+            if "workout_days_per_week" in prefs:
+                pref_lines.append(f"Workout days: {prefs.get('workout_days_per_week')}/wk")
+            if "session_minutes" in prefs:
+                pref_lines.append(f"Session: {prefs.get('session_minutes')} min")
+            if "motivation_style" in prefs:
+                pref_lines.append(f"Motivation: {prefs.get('motivation_style')}")
+            if pref_lines:
+                embed.add_field(name="Personalization", value=" | ".join(pref_lines), inline=False)
+
+        embed.set_footer(
+            text="✅ Saved to database" if saved else "⚠️ In-session only (Supabase not configured)"
+        )
+        await channel.send(embed=embed)
 
     def _extract_json_payload(self, text: str) -> Optional[Dict[str, Any]]:
         """Extract the most relevant JSON object from model output text.
@@ -1160,7 +1810,40 @@ class HealthButlerDiscordBot(Client):
 
     async def _send_daily_summary_embed(self, channel, user_id: str, latest_meal: Optional[Dict[str, Any]] = None):
         """Send a 'Today's Summary' embed as requested by user."""
-        if not profile_db or not user_id: return
+        if not user_id:
+            return
+
+        # Demo mode: compute totals from in-memory meal log (no DB dependency).
+        global demo_mode, demo_user_id, _demo_user_profile
+        if demo_mode and demo_user_id and str(user_id) == str(demo_user_id):
+            try:
+                profile = _demo_user_profile.get(str(user_id)) or get_user_profile(str(user_id)) or {"meals": []}
+                meals = profile.get("meals", []) or []
+                consumed = sum(float((m.get("macros") or {}).get("calories", 0) or 0) for m in meals)
+                meals_count = len(meals)
+                target = calculate_daily_target(profile)
+
+                percent = (consumed / target * 100) if target > 0 else 0
+                remaining = target - consumed
+
+                embed = Embed(title="🟢 Today's Summary", color=discord.Color.green())
+                embed.add_field(
+                    name="📊 Calories",
+                    value=f"**{consumed}** / {target} kcal ({percent:.1f}%)",
+                    inline=False,
+                )
+                embed.add_field(name="🍽️ Meals", value=f"**{meals_count}**", inline=True)
+                if remaining > 0:
+                    embed.add_field(name="💡 Status", value=f"You can have about **{remaining}** more kcal", inline=False)
+                else:
+                    embed.add_field(name="⚠️ Status", value=f"Over target by **{abs(remaining)}** kcal", inline=False)
+                await channel.send(embed=embed)
+            except Exception as e:
+                logger.error(f"Failed to send daily summary (demo): {e}")
+            return
+
+        if not profile_db:
+            return
         
         try:
             profile = get_user_profile(user_id)
@@ -1210,6 +1893,7 @@ class HealthButlerDiscordBot(Client):
             if "dish_name" in data and "total_macros" in data:
                 m = data["total_macros"]
                 meal_record = {
+                    "meal_id": None,
                     "time": datetime.now(LOCAL_TZ).strftime("%H:%M"),
                     "dish": data["dish_name"],
                     "macros": data["total_macros"]
@@ -1221,6 +1905,7 @@ class HealthButlerDiscordBot(Client):
                 if demo_mode and user_id == demo_user_id:
                     if user_id not in _demo_user_profile:
                         _demo_user_profile[user_id] = {"meals": []}
+                    meal_record["meal_id"] = f"demo-{uuid.uuid4().hex[:10]}"
                     _demo_user_profile[user_id].setdefault("meals", []).append(meal_record)
                     logger.info(f"📝 Demo meal saved: {data['dish_name']}")
 
@@ -1233,16 +1918,19 @@ class HealthButlerDiscordBot(Client):
                     carbs = float(m.get('carbs', 0) or 0)
                     fat = float(m.get('fat', 0) or 0)
 
-                    # 1. Create or update daily summary log
-                    profile_db.create_daily_log(
-                        discord_user_id=user_id,
-                        log_date=today,
-                        calories_intake=calories,
-                        protein_g=protein
-                    )
+                    # Keep legacy daily_logs write for backwards compatibility (tests + older schema).
+                    try:
+                        profile_db.create_daily_log(
+                            discord_user_id=user_id,
+                            log_date=today,
+                            calories_intake=calories,
+                            protein_g=protein,
+                        )
+                    except Exception:
+                        pass
 
-                    # 2. Create detailed meal record
-                    profile_db.create_meal(
+                    # 1. Create detailed meal record (source of truth for totals)
+                    created = profile_db.create_meal(
                         discord_user_id=user_id,
                         dish_name=data["dish_name"],
                         calories=calories,
@@ -1251,7 +1939,14 @@ class HealthButlerDiscordBot(Client):
                         fat_g=fat,
                         confidence_score=data.get("confidence_score") or data.get("total_confidence", 0.0)
                     )
+                    meal_record["meal_id"] = (created or {}).get("id")
                     logger.info(f"💾 Detailed meal persisted to DB: {data['dish_name']} ({calories} kcal)")
+
+                    # 2. Recompute daily log totals from meals (keeps daily_logs consistent)
+                    try:
+                        profile_db.recompute_daily_log_from_meals(user_id, today)
+                    except Exception:
+                        pass
 
                     # Also update local cache
                     if user_id in _user_profiles_cache:

@@ -5,6 +5,9 @@ import sys
 # Add project root to sys.path to allow importing from health_butler
 sys.path.append(os.getcwd())
 
+pytest.importorskip("chromadb")
+pytest.importorskip("sentence_transformers")
+
 from health_butler.data_rag.rag_tool import RagTool
 from health_butler.cv_food_rec.vision_tool import VisionTool
 from health_butler.agents.nutrition.nutrition_agent import NutritionAgent

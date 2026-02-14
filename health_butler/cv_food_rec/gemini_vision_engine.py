@@ -7,7 +7,7 @@ Updated to gemini-2.5-flash for reliability beyond March 2026.
 import os
 import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from google import genai
 from PIL import Image
 
@@ -41,7 +41,13 @@ class GeminiVisionEngine:
         else:
             logger.info(f"✅ GeminiVisionEngine initialized with stable model: {self.model_name}")
 
-    def analyze_food(self, image_path: str, user_context: Optional[str] = None) -> Dict[str, Any]:
+    def analyze_food(
+        self,
+        image_path: str,
+        user_context: Optional[str] = None,
+        *,
+        object_detections: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
         """
         Analyze a food image using Gemini and return structured data.
         """
@@ -58,6 +64,9 @@ Analyze the dish and ingredients.
 CRITICAL: Ignore generic YOLO labels like 'bowl' or 'plate' if they appear in the image metadata. Focus on actual food content.
 
 NUTRITION REFERENCE (per 100g):
+- Banana (raw): ~89 kcal, 1.1g protein, 23g carbs, 0.3g fat
+- Apple (raw): ~52 kcal, 0.3g protein, 14g carbs, 0.2g fat
+- Orange (raw): ~47 kcal, 0.9g protein, 12g carbs, 0.1g fat
 - Beef patty: ~250 kcal, 25g protein, 18g fat, 0g carbs
 - Chicken breast: ~165 kcal, 31g protein, 3.6g fat, 0g carbs
 - Burger bun: ~265 kcal, 9g protein, 50g carbs, 4g fat
@@ -66,9 +75,23 @@ NUTRITION REFERENCE (per 100g):
 - Pasta: ~131 kcal, 5g protein, 25g carbs, 1.1g fat
 
 Ensure protein, fat, and carbs are NON-ZERO if the food contains meat, cheese, oils, or cereal.
+
+PORTION RULES:
+- If there are multiple of the same item (e.g. several bananas), set `portion` to an explicit count like `x5`.
+- `estimated_weight_grams` should represent the approximate weight PER ITEM (not total) when `portion` is used.
+- Typical unit weights (edible): banana ~118g, apple ~182g, orange ~131g.
 """
             if user_context:
                 prompt += f"\n\nUSER CONTEXT: {user_context}"
+            if object_detections:
+                prompt += (
+                    "\n\nOBJECT_DETECTIONS (from a local detector; may be noisy—VERIFY VISUALLY): "
+                    + json.dumps(object_detections)
+                    + "\nUse OBJECT_DETECTIONS as hints for naming and counts, but do NOT blindly trust them."
+                    + "\nKnown failure mode: the detector can confuse oranges/tangerines/mandarins with donuts."
+                    + "\nIf the object is a solid citrus fruit (no hole), label it as Orange (or Tangerine), NOT Donut."
+                    + "\nIf OBJECT_DETECTIONS includes banana, ensure banana is included in `items`."
+                )
 
             # Phase 13: Structured Output Schema
             # This ensures 100% valid JSON and stable macro fields
@@ -89,6 +112,7 @@ Ensure protein, fat, and carbs are NON-ZERO if the food contains meat, cheese, o
                                     "type": "OBJECT",
                                     "properties": {
                                         "name": {"type": "STRING"},
+                                        "portion": {"type": "STRING"},
                                         "main_ingredients": {"type": "ARRAY", "items": {"type": "STRING"}},
                                         "estimated_weight_grams": {"type": "NUMBER"},
                                         "visual_volume_percentage": {"type": "NUMBER"},

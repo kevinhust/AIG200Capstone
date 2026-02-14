@@ -32,7 +32,8 @@ class Settings(BaseSettings):
 
     # Google GenAI Configuration
     GOOGLE_API_KEY: str = ""
-    GEMINI_MODEL_NAME: str = "gemini-2.5-pro"  # Gemini 2.5 Pro for Swarm agents
+    # Default to Flash to avoid free-tier Pro quota errors; override via env if needed.
+    GEMINI_MODEL_NAME: str = "gemini-2.5-flash"
 
     # Agent Configuration
     AGENT_NAME: str = "AntigravityAgent"
