@@ -1,115 +1,97 @@
-# 🛡️ Personal Health Butler AI v6.1 (Flagship Edition)
+# 🛡️ Personal Health Butler AI v8.5 (Stage Ready Edition)
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Version-6.1-blue.svg" alt="Version 6.1" />
+  <img src="https://img.shields.io/badge/Version-8.5-blue.svg" alt="Version 8.5" />
   <img src="https://img.shields.io/badge/AI_Engine-Gemini_2.5_Flash-orange.svg" alt="AI Engine" />
   <img src="https://img.shields.io/badge/Vision-YOLO11-success.svg" alt="Vision" />
   <img src="https://img.shields.io/badge/Database-Supabase_v6.0-green.svg" alt="Supabase" />
 </div>
 
-> Your intelligent, proactive, and science-backed digital health companion.
+> Your intelligent, proactive, and privacy-first digital health companion. Developed for Capstone 2026.
 
 ---
 
-## 🌟 The V6.1 Architecture (5-Layer Paradigm)
+## 🌟 The v8.5 Architecture (Decoupled & Agentic)
 
-Personal Health Butler v6.1 introduces a groundbreaking 5-layer architecture designed for sub-5-second latency and proactive health management.
+Personal Health Butler v8.5 introduces a **Modular Decoupled Architecture**, transitioning from a monolithic Bot object to a specialized multi-agent swarm.
 
-| Layer | Core Technologies | Key Capabilities |
+| Component | Core Technologies | Key Capabilities |
 | :--- | :--- | :--- |
-| **👁️ Perception** | **YOLO11 + Gemini 2.5 Flash** | Extreme precision visual recognition (food macros, portion size estimation). Latency < 5s. |
-| **🧠 Central Hub** | **Swarm Handoff Protocol** | Multi-agent coordination. Seamless context passing between Nutrition & Fitness Agents. |
-| **🛡️ Safety** | **RAG Injection & BR-001** | Dynamic medical disclaimers. Real-time interception of unsafe exercises based on recent meals. |
-| **🎮 Interaction** | **Discord Bot / UI Views** | Food Roulette 🎰, Proactive Push Reminders, Dynamic `[🏃 Work it off!]` Action Buttons. |
-| **💾 Persistence** | **Supabase v6.0 Serverless** | Automated TDEE triggers (`calculate_tdee`), monthly trend indexing (`v_monthly_trends`), and Gamification (`achievements`). |
+| **👁️ Perception** | **YOLO11 + Gemini 2.5 Flash** | Real-time food localization + semantic analysis. Latency < 5s. |
+| **🧠 Intelligence** | **Agentic Swarm Protocol** | Nutrition, Fitness, and Engagement coordination with context handoffs. |
+| **🛡️ Safety** | **BR-001 Safety Shield** | Dynamic RAG-based exercise filtering. Blocks intense workouts post-heavy-meals. |
+| **🔒 Privacy** | **Sensitive Intent Rerouting** | Automated PII protection. Redirects trends/summaries from public channels to DMs. |
+| **💾 Persistence** | **Supabase + RLS** | Secure, per-user health history, metabolic profiling, and achievement tracking. |
 
 ---
 
-## 🔄 Core Workflows
+## 🛠️ User Commands & Interactions
 
-### 1. Calorie Balance Shield (Active Defense)
-A real-time feedback loop between diet and exercise.
+The bot supports Slash commands (`/`), Natural Language triggers, and Interactive UI Views.
+
+### 🎮 Command Registry
+
+| Command | Category | Description |
+| :--- | :--- | :--- |
+| `/setup` | Onboarding | Initialize or update your health metrics (Height, Weight, Goals). |
+| `/demo` | Quick Start | Activate demo mode with a pre-configured health persona. |
+| `/help` | Guidance | **[NEW]** Tiered help system (Onboarding, Logging, Privacy, Support). |
+| `/roulette` | Gamification | **[NEW]** Spin the 🎰 Food Roulette for budget-aware meal ideas. |
+| `/trends` | Analytics | Generate a 30-day visual health report (Auto-rerouted to DM). |
+| `/summary` | Analytics | Real-time daily macro/calorie report (Auto-rerouted to DM). |
+| `/settings` | Preferences | Toggle proactive morning check-ins and notification intensity. |
+| `/reset` | Danger Zone | Wipe your persistent profile and history. |
+
+### 🧠 Intent-Based Triggers
+- **Greeting**: "hi", "hello" → Triggers premium onboarding flow.
+- **Profiling**: "Who am I?", "my profile" → Displays current health metrics.
+- **Support**: "I need help", "help" → Triggers the segmented help embed.
+
+---
+
+## 🏗️ Multi-Agent Coordination Flow
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant Bot as Discord UI
-    participant Nutrition as Nutrition Agent (Swarm)
-    participant Fitness as Fitness Agent (Swarm)
+    participant Discord as Discord UI (views.py)
+    participant Swarm as Swarm Orchestrator
+    participant Nutrition as Nutrition Agent (YOLO11)
+    participant Fitness as Fitness Agent (RAG)
     
-    User->>Bot: Uploads image of Fried Chicken (High Calorie)
-    Bot->>Nutrition: execute_async(image_path)
-    Nutrition-->>Nutrition: YOLO11 + Gemini Analysis
-    Nutrition-->>Bot: Returns Macros + `suggest_fitness_transfer=True`
-    Bot->>Bot: Detects risk, mounts `[🏃 Work it off!]` button
-    Bot-->>User: Displays Meal Embed + Warning + Button
-    User->>Bot: Clicks `[🏃 Work it off!]`
-    Bot->>Fitness: execute_async(handoff_signal + context)
-    Fitness-->>Fitness: Analyzes context (Heavy meal + Profile)
-    Fitness-->>Fitness: RAG Injects BR-001 Safety Filter
-    Fitness-->>User: Returns safe, low-intensity recovery workout
-```
-
-### 2. Food Roulette 🎰 (Gamification)
-Instead of rigidly tracking calories, users can spin the "Food Roulette" to discover budget-aware meal recommendations.
-
-- **Dynamic Filtering:** Filters potential meals based on user allergies (e.g., Tree Nut) and remaining daily Calorie Budget.
-- **Micro-animations:** Built into the Discord Interaction pipeline utilizing ephemeral spinning message states.
-
----
-
-## �️ User Commands
-
-The bot supports both Slash commands and Natural Language triggers.
-
-| Command | Description |
-| :--- | :--- |
-| `/setup` | Initialize or update your health profile (Step-by-step). |
-| `/demo` | Activate Demo Mode for quick testing/onboarding. |
-| `/exit` | Exit Demo Mode and clear temporary session data. |
-| `/reset` | **⚠️ Danger Zone:** Permanently clear your profile and history. |
-| `/settings` | Toggle morning check-ins and proactive notifications. |
-| `/trends` | Generate a 30-day health analytics report with AI insights. |
-| `/roulette` | Spin the 🎰 Food Roulette for budget-aware meal ideas. |
-| `Who am I?` | (Natural Language) Display your currently active health profile. |
-| `Summary` | (Natural Language) Get your real-time nutrition & activity report. |
-| `Help` | (Natural Language) List all available features and tips. |
-
----
-
-## �🚀 Quick Start
-
-### 1. Dependencies
-This prototype uses `pip` and `.env` configured environment variables.
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 2. Environment Variables (`.env`)
-Make sure to copy the `.env.template` and populate:
-- `DISCORD_TOKEN`: Your Discord Bot Token.
-- `GOOGLE_API_KEY`: API Key for Gemini 2.5 Flash.
-- `SUPABASE_URL` & `SUPABASE_SERVICE_ROLE_KEY`: Persistence connection strings.
-
-### 3. Launch the Bot
-```bash
-PYTHONPATH=. python3 -m src.discord_bot.bot
+    User->>Discord: Uploads Meal Image
+    Discord->>Nutrition: Detect & Analyze
+    Nutrition-->>Nutrition: YOLO11 Localization
+    Nutrition-->>Discord: Returns Macros + `HealthMemo`
+    Discord->>User: Renders Macro Dashboard
+    Note right of Discord: Post-meal Safety Analysis
+    Discord->>Fitness: Pass `HealthMemo` (Context Handoff)
+    Fitness-->>Fitness: Apply BR-001 Injury/Nutr Shield
+    Fitness-->>User: Suggests safe intensity recovery exercise
 ```
 
 ---
 
-## 📂 Repository Structure
+## 📂 Documentation & Engineering Logs
 
-```text
-├── src/
-│   ├── agents/          # Autonomous agents (Nutrition, Fitness, Router)
-│   ├── discord_bot/     # Discord UI, Views, and Application Transport
-│   ├── data_rag/        # RAG context and guidelines for Agents
-│   ├── swarm.py         # Multi-Agent Coordination Protocol
-│   └── supabase/        # Database clients / connection singletons
-├── data/                # Local Persistence / Reference JSONs
-├── scripts/             # Deployment and Testing utilities
-└── tests/               # E2E Simulations and Unit Tests
-```
+- **[Milestone 2 Report](docs/management/milestones/milestone2/milestone%202%20report.md)**: Evolution from v1.0 to v2.0.
+- **[System Upgrade Log](system_upgrade.md)**: Detailed module-by-module engineering entries.
+- **[Midterm Demo Plan](docs/management/milestones/milestone2/midterm_demo_plan.md)**: Presentation script and technical defense strategy.
+
+---
+
+## 🚀 Quick Start (Production Setup)
+
+1. **Clone & Install**:
+   ```bash
+   git clone https://github.com/kevinhust/capstonetest.git
+   pip install -r requirements.txt
+   ```
+2. **Configure environment variables** in `.env` (Consult `.env.template`).
+3. **Launch the swarm**:
+   ```bash
+   PYTHONPATH=. python3 -m src.discord_bot.bot
+   ```
+
+---
+*Generated by Antigravity - Version 8.5 | Architectural Excellence*
