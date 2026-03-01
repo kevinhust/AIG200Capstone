@@ -41,9 +41,9 @@ pip install -r requirements.txt
 ```
 
 ### 2.2 Running the App
-The application currently runs as a Discord Bot via `discord_bot/bot.py`.
+The application currently runs as a Discord Bot via `src/discord_bot/bot.py` or the `src.discord_bot.bot` module.
 ```bash
-python -m discord_bot.bot
+python -m src.discord_bot.bot
 ```
 > **Note**: Ensure your `.env` contains the required Discord Token and Google API Key.
 
