@@ -108,14 +108,22 @@ class HealthButlerEmbed:
         )
 
         # 1. Visualization (Sparklines)
-        cal_in = [d.get("calories_in", 0) for d in historical_raw]
-        active_min = [d.get("active_minutes", 0) for d in historical_raw]
-        
-        cal_spark = HealthButlerEmbed._generate_sparkline(cal_in)
-        act_spark = HealthButlerEmbed._generate_sparkline(active_min)
+        # Prefer AI-generated sparklines if available, else calculate from raw
+        ai_sparks = trend_data.get("sparklines", {})
+        cal_spark = ai_sparks.get("calories")
+        act_spark = ai_sparks.get("activity")
 
-        embed.add_field(name="🍎 Calorie Intake (30d)", value=f"`{cal_spark}`", inline=False)
-        embed.add_field(name="⚡ Active Minutes (30d)", value=f"`{act_spark}`", inline=False)
+        if not cal_spark or not act_spark:
+            # Fallback to local calculation (detecting view vs legacy columns)
+            # View: avg_calories | Legacy: calories_in
+            cal_data = [d.get("avg_calories") or d.get("calories_in", 0) for d in historical_raw]
+            # View: total_water | Legacy: active_minutes (approx)
+            act_data = [d.get("active_minutes") or d.get("total_water", 0) for d in historical_raw]
+            if not cal_spark: cal_spark = HealthButlerEmbed._generate_sparkline(cal_data)
+            if not act_spark: act_spark = HealthButlerEmbed._generate_sparkline(act_data)
+
+        embed.add_field(name="🍎 Calorie Trend (30d)", value=f"`{cal_spark}`", inline=False)
+        embed.add_field(name="📊 Activity/Hydration", value=f"`{act_spark}`", inline=False)
 
         # 2. Key Metrics
         stats = trend_data.get("weekly_stats", {})
@@ -141,6 +149,36 @@ class HealthButlerEmbed:
             embed.add_field(name="🚨 Alerts", value="\n".join([f"• {a}" for a in anomalies]), inline=False)
 
         embed.set_footer(text="Analytics Engine v1.0 • Predictive Health Forecasting")
+        return embed
+
+    @staticmethod
+    def build_welcome_embed(user_name: str) -> discord.Embed:
+        """
+        Builds a Premium Welcome Card for new users.
+        """
+        embed = discord.Embed(
+            title=f"👋 Welcome {user_name} to Your Personal Health Butler!",
+            description=(
+                "**\"Your journey to a data-driven healthy lifestyle starts here.\"**\n\n"
+                "我是你的数字健康管家。我集成了 **YOLO11 视觉感知**、**Mifflin-St Jeor 营养引擎** 和 "
+                "**Swarm 智能协同**，旨在为你提供 24/7 的专业守护。"
+            ),
+            color=HealthButlerEmbed.COLOR_MAP["info"],
+            timestamp=datetime.utcnow()
+        )
+        
+        embed.add_field(
+            name="🚀 专属健康盾初始化",
+            value=(
+                "• ⚙️ **生理档案**：计算你的精准 TDEE。\n"
+                "• 🚫 **安全边界**：录入过敏源与伤病史。\n"
+                "• 🎯 **目标设定**：定义你的减脂/增肌计划。"
+            ),
+            inline=False
+        )
+        
+        embed.set_image(url="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&q=80&w=1000") # Sample luxury fitness backdrop
+        embed.set_footer(text="Powered by Antigravity Health Swarm v6.1 • Premium Onboarding")
         return embed
 
     @staticmethod

@@ -196,7 +196,13 @@ You MUST respond with a valid JSON planning object.
         # Initialize BaseAgent directly to override Router's role
         super(CoordinatorAgent, self).__init__(role="coordinator", system_prompt=system_prompt, use_openai_api=False)
 
-    def analyze_and_delegate(self, user_task: str) -> List[Dict[str, Any]]:
+    async def route_query(self, query: str) -> List[Dict[str, Any]]:
+        """
+        Alias for analyze_and_delegate to maintain compatibility with legacy callers.
+        """
+        return await self.analyze_and_delegate(query)
+
+    async def analyze_and_delegate(self, user_task: str) -> List[Dict[str, Any]]:
         """
         Analyze task using Gemini Structured Output for 100% reliable JSON.
         """
@@ -222,7 +228,9 @@ Decide: should this go to "nutrition", "fitness", or both?
 Return a JSON object with a "delegations" array."""
 
         try:
-            response = self.client.models.generate_content(
+            import asyncio
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
                 model=settings.GEMINI_MODEL_NAME,
                 contents=self.system_prompt + "\n\n" + prompt,
                 config=GenerateContentConfig(

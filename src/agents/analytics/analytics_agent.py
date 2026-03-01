@@ -16,6 +16,7 @@ Responsibilities:
 2. Anomaly Detection: Flag deviations like 3+ days of over-eating or a sudden drop in workouts.
 3. Predictive Coaching: Estimate when the user will reach their target weight based on current net calorie averages.
 4. Actionable Insights: Provide specific, data-backed advice (e.g., "Your protein intake has dropped 20% this week, consider adding a post-workout shake").
+5. Visual Trends: Generate text-based sparklines (e.g. █▇▆▄▃▂ ) to represent data fluctuations.
 
 Tone: Analytical, objective, encouraging. Use percentages and dates.
 Format: Respond in structured JSON for the Discord Bot.
@@ -53,7 +54,11 @@ Return JSON:
      "avg_net_calories": 0,
      "avg_active_minutes": 0,
      "protein_consistency": "high|medium|low"
-  }}
+  }},
+   "sparklines": {{
+      "calories": "█▇▆▄",
+      "activity": " ▂▄▆"
+   }}
 }}
 """
         response = await self.execute_async(prompt)

@@ -331,10 +331,20 @@ RAG SAFE EXERCISES: {safe_ex_list}.
         result_str = await asyncio.to_thread(super().execute, full_task, context)
         
         # 7. Post-process and inject images into JSON recommendations if missing
+        if not result_str:
+            logger.warning("[FitnessAgent] LLM returned empty response. Using fallback.")
+            result_str = "{}"
+
         try:
             clean_str = result_str.strip()
             if "```json" in clean_str:
                 clean_str = clean_str.split("```json")[-1].split("```")[0].strip()
+            elif "```" in clean_str:
+                clean_str = clean_str.split("```")[-1].split("```")[0].strip()
+
+            if not clean_str:
+                raise ValueError("Empty response after cleaning")
+
             result_json = json.loads(clean_str)
             
             # Map images back to recommendations based on name matching
@@ -362,7 +372,10 @@ RAG SAFE EXERCISES: {safe_ex_list}.
             
         except Exception as e:
             logger.error(f"[FitnessAgent] Async post-process failed: {e}")
-            return result_str
+            # Try to return something usable even if not perfect JSON
+            if result_str and len(result_str) > 10:
+                return result_str
+            return json.dumps({"summary": "Error processing fitness advice.", "recommendations": []})
 
     def execute(self, task: str, context: Optional[List[Dict[str, Any]]] = None) -> str:
         """

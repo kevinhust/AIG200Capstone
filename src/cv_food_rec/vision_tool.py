@@ -27,6 +27,11 @@ class VisionTool:
             cls._instance = super(VisionTool, cls).__new__(cls)
         return cls._instance
 
+    @property
+    def model(self):
+        """Expose the model for external checks."""
+        return VisionTool._model
+
     def __init__(self, model_name: str = "yolo11n.pt") -> None:
         # Avoid re-initialization if already initialized
         if hasattr(self, 'initialized'):

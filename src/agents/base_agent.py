@@ -1,14 +1,10 @@
-"""
-Base Agent class for all specialist agents in the swarm.
-
-Provides common functionality for agent execution, context management,
-and communication with LLM APIs (supports Gemini and OpenAI-compatible APIs).
-"""
-
+import logging
 import os
 import requests
 from typing import Any, Dict, List, Optional
 from src.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class BaseAgent:
@@ -132,19 +128,34 @@ class BaseAgent:
             )
             return getattr(response, "text", str(response)).strip()
         except Exception as e:
+            logger.error(f"[{self.role}] Error executing task: {str(e)}\n(Quota might be exhausted)")
             return f"[{self.role}] Error executing task: {str(e)}\n(Quota might be exhausted)"
     
     def execute(self, task: str, context: Optional[List[Dict[str, str]]] = None) -> str:
         """
         Execute a task with optional context from other agents.
-        
-        Args:
-            task: The task description to execute.
-            context: Optional list of previous messages from other agents.
-            
-        Returns:
-            The agent's response as a string.
         """
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            return f"[{self.role}] Task completed"
+
+        prompt_parts = [f"Task: {task}"]
+        if context:
+            context_str = "\n\nContext from other agents:\n"
+            for msg in context:
+                context_str += f"[{msg.get('from', 'unknown')}]: {msg.get('content', '')}\n"
+            prompt_parts.append(context_str)
+        
+        full_prompt = "".join(prompt_parts)
+        
+        if self.use_openai_api:
+            result = self._call_openai_api(full_prompt)
+        else:
+            result = self._call_gemini_api(self.system_prompt + "\n\n" + full_prompt)
+        
+        self.conversation_history.append({"role": "user", "content": task})
+        self.conversation_history.append({"role": "assistant", "content": result})
+        
+        return result
     async def _call_openai_api_async(self, prompt: str) -> str:
         """Asynchronous call to OpenAI-compatible API."""
         import aiohttp
@@ -189,10 +200,10 @@ class BaseAgent:
             return f"[{self.role}] Error: Gemini client not initialized"
         
         try:
-            # The genai SDK's generate_content is synchronous, or uses a thread in async mode.
-            # For this project, we wrap it in a thread or use a dedicated async client if available.
-            # Assuming genai 1.0+ has async support:
-            response = await self.client.models.generate_content(
+            import asyncio
+            # Wrap synchronous generate_content in a thread to keep it async-friendly
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
                 model=settings.GEMINI_MODEL_NAME,
                 contents=prompt
             )

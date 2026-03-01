@@ -1,82 +1,96 @@
-# AI Capstone Project Workspace
+# 🛡️ Personal Health Butler AI v6.1 (Flagship Edition)
 
-## Project: Personal Health Butler AI (Prototype)
+<div align="center">
+  <img src="https://img.shields.io/badge/Version-6.1-blue.svg" alt="Version 6.1" />
+  <img src="https://img.shields.io/badge/AI_Engine-Gemini_2.5_Flash-orange.svg" alt="AI Engine" />
+  <img src="https://img.shields.io/badge/Vision-YOLO11-success.svg" alt="Vision" />
+  <img src="https://img.shields.io/badge/Database-Supabase_v6.0-green.svg" alt="Supabase" />
+</div>
 
-> **Welcome Developers!**
-> This repository uses a specialized **Antigravity Scaffold** designed for efficient AI Agent development.
-> Please read this guide carefully before contributing.
-
----
-
-## 1. Directory Structure
-
-This workspace is divided into two distinct areas:
-
-```
-├── agents/          # specialist agents (nutrition, fitness)
-├── coordinator/     # main router and logic
-├── cv_food_rec/      # Computer Vision food recognition
-├── data/            # Persistence (SQLite, JSON, Embeddings)
-├── data_rag/        # RAG Logic and Tools
-├── discord_bot/     # Discord Transport and Bot implementation
-├── scripts/         # Ingestion and setup scripts
-├── src/             # Core base classes from scaffolding
-├── tests/           # Comprehensive test suite
-├── Dockerfile       # Cloud Run deployment
-└── README.md        # This file
-```
+> Your intelligent, proactive, and science-backed digital health companion.
 
 ---
 
-## 2. Quick Start
+## 🌟 The V6.1 Architecture (5-Layer Paradigm)
 
-### 2.1 Dependencies
-We use `pip` for this prototype phase.
+Personal Health Butler v6.1 introduces a groundbreaking 5-layer architecture designed for sub-5-second latency and proactive health management.
+
+| Layer | Core Technologies | Key Capabilities |
+| :--- | :--- | :--- |
+| **👁️ Perception** | **YOLO11 + Gemini 2.5 Flash** | Extreme precision visual recognition (food macros, portion size estimation). Latency < 5s. |
+| **🧠 Central Hub** | **Swarm Handoff Protocol** | Multi-agent coordination. Seamless context passing between Nutrition & Fitness Agents. |
+| **🛡️ Safety** | **RAG Injection & BR-001** | Dynamic medical disclaimers. Real-time interception of unsafe exercises based on recent meals. |
+| **🎮 Interaction** | **Discord Bot / UI Views** | Food Roulette 🎰, Proactive Push Reminders, Dynamic `[🏃 Work it off!]` Action Buttons. |
+| **💾 Persistence** | **Supabase v6.0 Serverless** | Automated TDEE triggers (`calculate_tdee`), monthly trend indexing (`v_monthly_trends`), and Gamification (`achievements`). |
+
+---
+
+## 🔄 Core Workflows
+
+### 1. Calorie Balance Shield (Active Defense)
+A real-time feedback loop between diet and exercise.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Bot as Discord UI
+    participant Nutrition as Nutrition Agent (Swarm)
+    participant Fitness as Fitness Agent (Swarm)
+    
+    User->>Bot: Uploads image of Fried Chicken (High Calorie)
+    Bot->>Nutrition: execute_async(image_path)
+    Nutrition-->>Nutrition: YOLO11 + Gemini Analysis
+    Nutrition-->>Bot: Returns Macros + `suggest_fitness_transfer=True`
+    Bot->>Bot: Detects risk, mounts `[🏃 Work it off!]` button
+    Bot-->>User: Displays Meal Embed + Warning + Button
+    User->>Bot: Clicks `[🏃 Work it off!]`
+    Bot->>Fitness: execute_async(handoff_signal + context)
+    Fitness-->>Fitness: Analyzes context (Heavy meal + Profile)
+    Fitness-->>Fitness: RAG Injects BR-001 Safety Filter
+    Fitness-->>User: Returns safe, low-intensity recovery workout
+```
+
+### 2. Food Roulette 🎰 (Gamification)
+Instead of rigidly tracking calories, users can spin the "Food Roulette" to discover budget-aware meal recommendations.
+
+- **Dynamic Filtering:** Filters potential meals based on user allergies (e.g., Tree Nut) and remaining daily Calorie Budget.
+- **Micro-animations:** Built into the Discord Interaction pipeline utilizing ephemeral spinning message states.
+
+---
+
+## 🚀 Quick Start
+
+### 1. Dependencies
+This prototype uses `pip` and `.env` configured environment variables.
 ```bash
-# 1. Activate Environment (Assuming capstoneenv)
-source capstoneenv/bin/activate  # or similar
-
-# 2. Install Requirements
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2.2 Running the App
-The application currently runs as a Discord Bot via `src/discord_bot/bot.py` or the `src.discord_bot.bot` module.
+### 2. Environment Variables (`.env`)
+Make sure to copy the `.env.template` and populate:
+- `DISCORD_TOKEN`: Your Discord Bot Token.
+- `GOOGLE_API_KEY`: API Key for Gemini 2.5 Flash.
+- `SUPABASE_URL` & `SUPABASE_SERVICE_ROLE_KEY`: Persistence connection strings.
+
+### 3. Launch the Bot
 ```bash
-python -m src.discord_bot.bot
+PYTHONPATH=. python3 -m src.discord_bot.bot
 ```
-> **Note**: Ensure your `.env` contains the required Discord Token and Google API Key.
 
 ---
 
-## 3. Development Workflow
+## 📂 Repository Structure
 
-### 3.1 Making Changes (OpenSpec)
-We strictly track requirements via OpenSpec.
-1.  **Define**: Create a proposal in `openspec/changes/<feature-name>/proposal.md`.
-2.  **Plan**: Define tasks in `openspec/changes/<feature-name>/tasks.md`.
-3.  **Implement**: Write code in root.
-4.  **Archive**: Run `openspec archive <feature-name>` to finalize.
-
-### 3.2 Adding Agents
--   Create new agents in `agents/`.
--   Inherit from `src.agents.base_agent.BaseAgent`.
-
-### 3.3 Adding Tools
--   Create tool modules in root or appropriate subdirectories.
--   Ensure they return standard dict-based outputs `{"status": "...", "data": ...}`.
-
----
-
-## 4. Tech Stack (Phase 8)
--   **Orchestration**: Google GenAI Structured Routing
--   **Vision**: Gemini 2.5 Flash via `google.genai` SDK (w/ YOLO hints)
--   **RAG**: SimpleRagTool for JSON-based safety filtering
--   **UI**: Discord Bot with 5-step Profile Onboarding
-
----
-
-## 5. Collaboration
--   **Branching**: Development happens on feature branches (e.g., `feature/login`).
--   **Sync**: Push to `origin/Kevin` (or your personal branch) frequently.
--   **Review**: Ensure `tests/` pass before merging.
+```text
+├── src/
+│   ├── agents/          # Autonomous agents (Nutrition, Fitness, Router)
+│   ├── discord_bot/     # Discord UI, Views, and Application Transport
+│   ├── data_rag/        # RAG context and guidelines for Agents
+│   ├── swarm.py         # Multi-Agent Coordination Protocol
+│   └── supabase/        # Database clients / connection singletons
+├── data/                # Local Persistence / Reference JSONs
+├── scripts/             # Deployment and Testing utilities
+└── tests/               # E2E Simulations and Unit Tests
+```

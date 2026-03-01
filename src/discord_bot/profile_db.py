@@ -582,6 +582,22 @@ class ProfileDB:
         # Return sorted list
         return sorted(daily_stats.values(), key=lambda x: x["date"])
 
+    def get_monthly_trends_raw(self, discord_user_id: str) -> List[Dict[str, Any]]:
+        """
+        Query the v_monthly_trends view for high-level monthly stats.
+        Returns aggregated data for the last 30 days.
+        """
+        try:
+            response = self.client.table("v_monthly_trends")\
+                .select("*")\
+                .eq("user_id", discord_user_id)\
+                .execute()
+            return response.data or []
+        except Exception as e:
+            # Fallback to manual aggregation if view is missing or inaccessible
+            print(f"DEBUG: Falling back from v_monthly_trends due to: {e}")
+            return self.get_historical_trends(discord_user_id, days=30)
+
 
 # Singleton instance for app-wide use
 _db_instance: Optional[ProfileDB] = None

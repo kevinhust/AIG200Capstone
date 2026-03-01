@@ -21,6 +21,8 @@ from src.config import settings
 # Recommended Stable Model as of Feb 2026
 DEFAULT_MODEL = "gemini-2.5-flash"
 
+logger = logging.getLogger(__name__)
+
 class GeminiVisionEngine:
     """
     Semantic engine for food analysis using Gemini.

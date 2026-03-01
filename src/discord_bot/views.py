@@ -4,7 +4,75 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List
 import logging
 
+import logging
+from src.discord_bot.modals import RegistrationModal
+
 logger = logging.getLogger(__name__)
+
+class OnboardingGreetingView(ui.View):
+    """
+    Minimal Greeting View (Phase 6.2).
+    Simple 'Hi' + 'Start Setup' button to restore a clean first interaction.
+    """
+    def __init__(self, on_registration_submit: Any, embed_factory: Any):
+        super().__init__(timeout=None)
+        self.on_registration_submit = on_registration_submit
+        self.embed_factory = embed_factory
+
+    @ui.button(label='Start Setup', style=discord.ButtonStyle.green, emoji='🚀')
+    async def enter_onboarding(self, interaction: discord.Interaction, button: ui.Button):
+        # Reveal the full Premium Welcome Embed
+        from src.discord_bot.views import OnboardingStartView
+        embed = self.embed_factory.build_welcome_embed(interaction.user.display_name)
+        view = OnboardingStartView(
+            on_registration_submit=self.on_registration_submit,
+            embed_factory=self.embed_factory
+        )
+        # Transition from simple text to premium embed
+        await interaction.response.edit_message(content=None, embed=embed, view=view)
+
+class OnboardingStartView(ui.View):
+    """
+    Premium Cold-Start Landing View (Phase 6.1).
+    Bridges new users to the onboarding modal or a demo overview.
+    """
+    def __init__(self, on_registration_submit: Any, embed_factory: Any):
+        super().__init__(timeout=None) # No timeout for the main entry point
+        self.on_registration_submit = on_registration_submit
+        self.embed_factory = embed_factory
+
+    @ui.button(label='Start Onboarding', style=discord.ButtonStyle.green, emoji='🚀')
+    async def start_onboarding(self, interaction: discord.Interaction, button: ui.Button):
+        # Open Step 1/3 Modal
+        await interaction.response.send_modal(RegistrationModal(on_submit_callback=self.on_registration_submit))
+
+    @ui.button(label='View Demo', style=discord.ButtonStyle.blurple, emoji='📖')
+    async def view_demo(self, interaction: discord.Interaction, button: ui.Button):
+        # Show a pre-canned "Taco Simulation" result to build trust
+        await interaction.response.send_message(
+            "📝 **Demo Mode**: Here is what Butler does when I analyze a high-calorie meal (like Tacos!) for a user with a knee injury...",
+            ephemeral=True
+        )
+        # Note: In a real bot, we'd send the Taco Embed here. 
+        # For simplicity, we can link the user to the documentation or send a summary string.
+        demo_text = (
+            "✅ Identified: **Assorted Beef Tacos** (1226 kcal)\n"
+            "✅ Warning: **High Fat/High Oil** detected.\n"
+            "🛡️ **Calorie Balance Shield** triggered! \n"
+            "➡️ Butler recommended a *30m Light Walk* and injected safety disclaimer `BR-001`."
+        )
+        await interaction.followup.send(demo_text, ephemeral=True)
+
+    @ui.button(label='Learn More', style=discord.ButtonStyle.gray, emoji='❓')
+    async def learn_more(self, interaction: discord.Interaction, button: ui.Button):
+        info_text = (
+            "**Personal Health Butler AI v6.1**\n"
+            "• **Vision**: YOLO11 Real-time Perception\n"
+            "• **Brain**: Health Swarm (Nutrition + Fitness coordination)\n"
+            "• **Safety**: RAG-driven medical guardrails\n"
+            "• **Persistence**: Supabase v6.0 Cloud Analytics"
+        )
+        await interaction.response.send_message(info_text, ephemeral=True)
 
 class RegistrationViewA(ui.View):
     """

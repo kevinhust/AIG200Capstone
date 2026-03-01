@@ -23,7 +23,7 @@ from discord.ext import commands, tasks
 from src.swarm import HealthSwarm
 from src.discord_bot.embed_builder import HealthButlerEmbed
 from src.discord_bot.modals import RegistrationModal
-from src.discord_bot.views import RegistrationViewA, RegistrationViewB, LogWorkoutView, SettingsView
+from src.discord_bot.views import RegistrationViewA, RegistrationViewB, LogWorkoutView, SettingsView, OnboardingStartView, OnboardingGreetingView
 from src.discord_bot.roulette_view import RouletteView, MealInspirationView
 from src.agents.engagement.engagement_agent import EngagementAgent
 from src.agents.analytics.analytics_agent import AnalyticsAgent
@@ -486,6 +486,57 @@ class MealLogView(discord.ui.View):
 
         self._sync_button_states()
 
+        # Phase 6: Calorie Balance Shield - Dynamic Handoff Button
+        if self.nutrition_payload.get("suggest_fitness_transfer"):
+            work_it_off_btn = discord.ui.Button(
+                label="Work it off!", 
+                style=discord.ButtonStyle.blurple, 
+                emoji="🏃", 
+                custom_id=f"work_it_off_{uuid.uuid4().hex[:8]}"
+            )
+            work_it_off_btn.callback = self.on_work_it_off
+            self.add_item(work_it_off_btn)
+
+    async def on_work_it_off(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != str(self.user_id):
+            return await interaction.response.send_message("This is for someone else.", ephemeral=True)
+            
+        await interaction.response.send_message("🔄 *Consulting Fitness Agent for a compensatory workout plan...*", ephemeral=True)
+        
+        try:
+            profile = get_user_profile(self.user_id)
+            user_context = {
+                "user_id": self.user_id,
+                "name": profile.get("name", "User"),
+                "conditions": profile.get("conditions", []),
+                "nutrition_summary": json.dumps(self.nutrition_payload)
+            }
+            
+            from src.swarm import handoff_to_fitness
+            handoff_signal = handoff_to_fitness()
+            
+            result = await self.bot.swarm.execute_async(
+                user_input=f"{handoff_signal}: need post-meal compensatory workout for heavy/fried meal",
+                user_context=user_context
+            )
+            
+            await self.bot._send_swarmed_response(
+                interaction.channel,
+                result.get("response", "{}"),
+                self.user_id,
+                scan_mode=False
+            )
+            
+            # Disable button to prevent spamming
+            for child in self.children:
+                if getattr(child, "label", None) == "Work it off!":
+                    child.disabled = True
+            await interaction.message.edit(view=self)
+            
+        except Exception as e:
+            logger.error(f"Failed fitness handoff: {e}")
+            await interaction.followup.send("⚠️ Failed to get fitness plan.", ephemeral=True)
+
     def _sync_button_states(self) -> None:
         """Enable/disable buttons based on logged state (best-effort)."""
         try:
@@ -929,6 +980,25 @@ class HealthButlerDiscordBot(Client):
         # Helper for user_id in later scopes
         author_id = str(message.author.id)
 
+        # Phase 6.1/6.2: Premium "Cold Start" Onboarding Hook
+        greetings = ["hi", "hello", "你好", "start", "hey", "👋"]
+        content_lower = message.content.strip().lower()
+        if content_lower in greetings or content_lower == "/setup":
+            profile = get_user_profile(author_id)
+            onboarding_done = profile.get("preferences", {}).get("onboarding_completed", False)
+            if not onboarding_done and "preferences_json" in profile:
+                onboarding_done = profile.get("preferences_json", {}).get("onboarding_completed", False)
+
+            # /setup always triggers it, 'hi' only for new users
+            if not onboarding_done or content_lower == "/setup":
+                greeting_text = f"Hi **{message.author.display_name}**! I'm **Health Butler**. Let's set up your profile for safety-first health advice."
+                view = OnboardingGreetingView(
+                    on_registration_submit=_on_registration_modal_submit, 
+                    embed_factory=HealthButlerEmbed
+                )
+                await message.reply(greeting_text, view=view)
+                return
+
         if message.content.strip().lower().startswith("/demo"):
             await self._handle_demo_command(message)
             return
@@ -955,9 +1025,12 @@ class HealthButlerDiscordBot(Client):
 
             await message.channel.send("🔍 Analyzing your health trends... this may take a moment.")
             
-            # 1. Fetch 30-day data
             if profile_db:
-                historical_data = profile_db.get_historical_trends(author_id, days=30)
+                # 1. Fetch monthly stats from optimized view (v6.0)
+                historical_data = profile_db.get_monthly_trends_raw(author_id)
+                # Fallback if view is empty but daily_logs might have data
+                if not historical_data:
+                    historical_data = profile_db.get_historical_trends(author_id, days=30)
                 
                 # 2. Process with AnalyticsAgent
                 analysis = await self.analytics_agent.analyze_trends(historical_data, profile)

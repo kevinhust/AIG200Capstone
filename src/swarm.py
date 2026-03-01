@@ -5,6 +5,7 @@ Wraps specialized agents (Fitness, Nutrition) into a unified interface.
 
 import logging
 import json
+import asyncio
 from typing import Dict, Any, List, Optional
 from src.agents.router_agent import RouterAgent
 from src.data_rag.simple_rag_tool import SimpleRagTool
@@ -87,8 +88,26 @@ class HealthSwarm:
                 from src.agents.nutrition.nutrition_agent import NutritionAgent
                 agent = NutritionAgent()
                 context = [{"type": "user_context", "content": json.dumps(user_context or {})}]
+                if image_path:
+                    context.append({"type": "image_path", "content": image_path})
+                    
                 # Handle image if available for the nutrition part of task
-                res = await agent.execute_async(f"Analyze: {task}", context)
+                res = await agent.execute_async(task, context, progress_callback=progress_callback)
+                
+                # Phase 6: Calorie Balance Shield Checking
+                try:
+                    res_json = json.loads(res)
+                    cal_pct = res_json.get("daily_value_percentage", {}).get("calories", 0)
+                    warnings = [w.lower() for w in res_json.get("visual_warnings", [])]
+                    
+                    suggest_fitness_transfer = cal_pct > 50.0 or any("fried" in w or "oil" in w or "greasy" in w for w in warnings)
+                    
+                    if suggest_fitness_transfer:
+                        res_json["suggest_fitness_transfer"] = True
+                        res = json.dumps(res_json)
+                except Exception as e:
+                    logger.warning(f"Error checking fitness transfer: {e}")
+
                 results.append(res)
                 final_agent = "nutrition"
             

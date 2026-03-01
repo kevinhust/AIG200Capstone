@@ -44,7 +44,8 @@ Example: "I want to train legs and then eat well" -> Delegate to fitness then nu
         # (e.g., CoordinatorAgent passes role="coordinator" with custom system_prompt)
         role = kwargs.pop('role', 'router')
         system_prompt_override = kwargs.pop('system_prompt', system_prompt)
-        super().__init__(role=role, system_prompt=system_prompt_override, **kwargs)
+        use_openai_api = kwargs.pop('use_openai_api', False) # Default to Gemini for Router
+        super().__init__(role=role, system_prompt=system_prompt_override, use_openai_api=use_openai_api, **kwargs)
     
     def analyze_and_delegate(self, user_task: str) -> List[Dict[str, str]]:
         """
