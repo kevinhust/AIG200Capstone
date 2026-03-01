@@ -1,78 +1,71 @@
-# Milestone 2 Report: Data Prep, Initial Modeling & Prototyping
+# Milestone 2 Report: Evolution to Agentic Swarm (v2.0)
+**Date:** 2026-03-01
+**Status:** Core Pipeline Operational ✅
 
-## 1. Project Overview
-The **Personal Health Butler AI** has successfully transitioned from a conceptual framework to a functional, persistent, and multi-agent system. This milestone highlights the implementation of a **Hybrid Vision Pipeline (YOLO + Gemini)** and a **Supabase-backed Persistence Layer**, moving beyond simple classification to a robust, context-aware health assistant.
+## 1. Executive Summary: The v1.0 to v2.0 Leap
+Since Milestone 1, the **Personal Health Butler AI** has evolved from a simple Streamlit/ViT prototype into a **decoupled, multi-agent production system** hosted on Discord. We have successfully solved the "God Object" bottleneck, implemented safe per-user persistence, and upgraded our vision perception to state-of-the-art YOLO11.
 
-## 2. Data Preparation & Knowledge Integration
-Our data strategy has evolved to support multi-modal inputs, ensuring that visual data is accurately translated into nutritional insights and stored for long-term tracking.
+## 2. Key Functional & Technical Upgrades
 
-### A. Computer Vision Data & Detection
--   **Multi-Object Focus**: We moved beyond single-category classification. The system now handles complex meals with multiple overlapping items.
--   **Preprocessing**: Standardized input images to 640x640 for the object detection model, with augmentations (rotation, shear) to handle diverse "real-world" kitchen lighting and angles.
+### A. Perception: State-of-the-Art Vision (v2.0)
+- **Model Upgrade (Module 7)**: Transitioned to **YOLO11** (n/s) for food localization, maintaining `<2s` latency.
+- **Risk Perception (Module 2)**: The `GeminiVisionEngine` now identifies **Cooking Methods** (Fried, High-Oil, Processed) and assigns a **Health Score (1-10)** to flag nutritional risks.
 
-### B. Enhanced RAG (Knowledge Retrieval)
--   **Nutritional RAG**: Stores 10,000+ entries in **ChromaDB**, allowing the system to cross-reference visual findings with scientific caloric data.
--   **Safety RAG**: A dedicated retrieval layer containing medical/fitness restrictions (e.g., knee-friendly exercises, heart rate zones) ensures the Fitness Agent adapts to user constraints.
+### B. The "Smart Swarm" & Safety Protocol
+- **Health Memo Protocol (Module 3)**: Implemented a cross-agent handoff where the **Nutrition Agent** passes meta-data (`HealthMemo`) to the **Fitness Agent**.
+- **Dynamic Safety Filtering (Module 3 Part 2)**: Introduced **BR-001 Safety Shield**. If fried/processed food is detected, the Fitness Agent automatically blocks high-intensity activities (e.g., HIIT, Sprinting) and advises lower-intensity alternatives.
 
-## 3. Initial Modeling: The Hybrid Intelligence Pipeline
-The core innovation in Milestone 2 is the **Hybrid Vision Pipeline**, which combines the speed of local detection with the reasoning of a Large Multimodal Model (LMM).
+### C. Premium UI & Proactive Care
+- **Rich Media (Module 5)**: Integrated **wger.de API** with a hybrid local cache (800+ entries) to display real exercise images for all suggestions.
+- **Proactive Engagement (Module 6 & 9)**: 
+    - **Morning Check-ins**: Automated status reports on goals.
+    - **Food Roulette🎰**: A budget-aware meal suggestion system with weighted physics-based animation (Module 14).
+    - **Pre-meal Budgets**: Real-time calorie/macro remaining calculating using the **Mifflin-St Jeor** formula (Module 8).
 
-### A. The "Eyes": YOLOv8 Object Detection
-We integrated **YOLOv8n (Nano)** via the `VisionTool` to provide instant spatial awareness.
--   **Role**: Detects *where* food items are and counts them.
--   **Performance**: Fast inference (<100ms) to identify bounding boxes.
--   **Benefits**: Handles multiple items (e.g., "3 apples", "1 bowl") that pure LMMs often miss or hallucinate counts for.
+## 3. Core Architectural Moats
 
-### B. The "Brain": Gemini 2.5 Flash
-For semantic understanding, we deployed **Gemini 2.5 Flash** in the `GeminiVisionEngine`.
--   **Role**: Analyzes the contents of the YOLO bounding boxes to determine *what* the food is (ingredients, cooking method, portion size).
--   **Structured Outputs**: We utilize Gemini's JSON schema enforcement to guarantee consistent data formats for macronutrients (Calories, Protein, Carbs, Fat).
--   **Prompt Engineering**: The engine operates under a strict "Expert Nutritionist" persona, using local object detection results as hints to refine its analysis and reduce hallucinations (e.g., distinguishing an orange from a donut).
+### A. Professional Decoupling (Module 10-12)
+- **God Object Elimination**: Reduced `bot.py` by **47%** by migrating logic to `views.py`, `commands.py`, and `profile_utils.py`.
+- **Intent-Based Orchestration**: Introduced a sophisticated `intent_parser.py` that handles complex natural language triggers for summaries and profile management.
 
-## 4. Architecture Evolution: Persistence & Integration
-We have moved from stateless interactions to a fully persistent architecture using **Supabase**.
+### B. Privacy-First Identity (Module 13)
+- **Sensitive Intent Rerouting**: Automated redirection of PII-sensitive queries (Summary, Trends) from public Discord text channels to private DMs.
 
-### A. Supabase Persistence Layer
-The `ProfileDB` module now serves as the single source of truth for user data, replacing ephemeral memory.
--   **User Profiles (`profiles`)**: Stores detailed anthropometric data (Height, Weight, Age), goals, and medical conditions (e.g., "Knee Pain").
--   **Nutritional Tracking (`meals`, `daily_logs`)**: Automatically logs every meal analyzed by the vision pipeline. Aggregates daily calorie and protein intake to track progress against goals.
--   **Workout History (`workout_logs`, `workout_routines`)**: Persists recommended exercises and active routines, allowing the Fitness Agent to adapt future suggestions based on past performance.
--   **Chat Context (`chat_messages`)**: Maintains conversational history for a seamless, context-aware user experience.
+## 4. Engineering Pivots & Challenges
+- **Latency Balancing**: Switched to parallel execution for YOLO/Gemini to meet the **<5s total response** KPI.
+- **Persistence Evolution**: Moved from simple SQL queries to a robust **Supabase + RLS (Row Level Security)** model to ensure data isolation between users.
+- **Ephemeral Storage Compliance (Module 4)**: Implemented strict `finally` block cleanup for all vision tasks (BR-005).
 
-### B. Architecture Diagram (Phase 2)
-The system now follows a `User -> Discord -> Swarm -> Supabase` flow:
+## 4. Architecture Diagram (v2.0 Decoupled)
 
 ```mermaid
-graph LR
-    User([User]) --> Discord[Discord Bot Gateway]
+graph TD
+    User([User]) --> Discord[Discord Gateway]
     
-    subgraph "Swarm Orchestrator"
-        Discord --> VisionS[Singleton VisionTool]
-        Discord --> Coordinator[Coordinator Agent]
-        Coordinator --> Nutr[Nutrition Agent]
-        Coordinator --> Fit[Fitness Agent]
+    subgraph "Interface Layer (Decoupled)"
+        Discord --> CMD[commands.py: Trigger Handlers]
+        Discord --> View[views.py: UI State]
     end
 
-    subgraph "Hybrid Vision Pipeline"
-        Nutr -.-> VisionS
-        VisionS --> YOLO[YOLOv8: Detect Boundaries]
-        VisionS --> Gem[Gemini 2.5: Semantic Analysis]
-        Gem --JSON--> DB[(Supabase DB)]
+    subgraph "Intelligence Swarm (Agentic)"
+        CMD --> Swarm[swarm.py: Dynamic Router]
+        Swarm --> Nutr[Nutrition Expert: YOLO11 + RAG]
+        Swarm --> Fit[Fitness Expert: Injury Shield]
     end
 
-    subgraph "Data & Safety"
-        Fit --> DB
-        Fit --> Safety[Safety RAG]
-        DB --> Profile[User Profile & Logs]
+    subgraph "Persistence Layer (Secure)"
+        Nutr & Fit --> Supa[(Supabase: PostgreSQL + RLS)]
+        Supa --> History[Historical Trends]
+        Supa --> Safety[Injury & Allergy Profile]
     end
 ```
 
-## 5. Prototyping Results
--   **Discord Integration**: Fully functional bot handling image uploads and natural language queries.
--   **Latency Optimization**: The Hybrid approach (YOLO filtering before Gemini analysis) balances cost and speed.
--   **Safety-First Design**: The integration of `health_conditions` in Supabase ensures that a user with "lower back pain" is never recommended deadlifts.
+## 5. Challenges & Engineering Pivots
+- **Latency vs. Accuracy**: We implemented **Parallel perception** (YOLO and Gemini running concurrently) to keep response times under 5 seconds.
+- **God Object Debt**: The modular refactor was critical to allow multiple teammates to work on different agents without merge conflicts.
+- **Privacy Barrier**: Realized health data in public channels was a friction point; implemented the **"Sensitive Intent" redirector** to DMs.
 
-## 6. Next Steps
--   **Advanced Analytics**: Build a dashboard to visualize weekly progress from Supabase data.
--   **Feedback Loop**: Implement a user feedback mechanism to "correct" Gemini's food analysis, fine-tuning the prompt context over time.
--   **Deployment**: Finalize the Docker container optimization for Cloud Run to ensure "Always-on" availability.
+## 6. Project Outlook (Target v3.0)
+- **API Synergy**: Integration with Wger and Google Health Connect.
+- **Visual Memory**: AI-driven "Before & After" meal comparison.
+- **Behavioral Psychology**: Adaptive personality based on user consistency.

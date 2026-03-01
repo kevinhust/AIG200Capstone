@@ -16,6 +16,16 @@ class HealthButlerEmbed:
     }
 
     @staticmethod
+    def create_base_embed(title: str, description: str, color: discord.Color = discord.Color.blue()) -> discord.Embed:
+        """Creates a consistent base embed with timestamp."""
+        return discord.Embed(
+            title=title,
+            description=description,
+            color=color,
+            timestamp=datetime.utcnow()
+        )
+
+    @staticmethod
     def build_fitness_card(data: Dict[str, Any], user_name: str = "User") -> discord.Embed:
         """
         Builds a rich fitness recommendation card with exercise images.

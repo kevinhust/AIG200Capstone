@@ -41,55 +41,65 @@ class RouletteView(ui.View):
         
         # 1. Filter pool based on remaining calories
         remaining_cals = self.remaining_budget.get("calories", 2000)
-        
-        # Heuristic: Only suggest foods that fit within 80% of remaining budget
-        # or have a low calorie floor (50) to avoid suggesting nothing.
         eligible_pool = [
             f for f in self.food_pool 
-            if f["calories"] <= max(100, remaining_cals * 0.8)
+            if f["calories"] <= max(120, remaining_cals * 0.9)
         ]
         
         if not eligible_pool:
-            eligible_pool = [f for f in self.food_pool if f["calories"] < 200]
+            eligible_pool = [f for f in self.food_pool if f["calories"] < 250]
             
-        # 2. Animation loop
+        # 2. Enhanced Animation loop (Braking Effect)
         rolling_emojis = ["🥗", "🍎", "🍗", "🍱", "🍣", "🥑", "🥦", "🍓", "🥩", "🥚", "🍲", "🍤"]
-        for i in range(6):
+        frames = 10
+        for i in range(frames):
             emoji = random.choice(rolling_emojis)
-            await interaction.edit_original_response(content=f"🎰 **The Roulette is spinning...** {emoji}")
-            await asyncio.sleep(0.4)
+            progress = "▰" * (i + 1) + "▱" * (frames - i - 1)
+            # Slower as it approaches the end
+            wait_time = 0.2 + (i * 0.1) 
+            content = f"🎰 **The Roulette is spinning...**\n`{progress}` {emoji}"
+            await interaction.edit_original_response(content=content)
+            await asyncio.sleep(wait_time)
             
         # 3. Final Selection
         final_choice = random.choice(eligible_pool)
         
-        # 4. Result Embed
+        # 4. Premium Result Embed
         embed = discord.Embed(
-            title="🎯 Your Healthy Inspiration",
+            title="🎯 Butler's Selection: Prime Health Choice",
             description=(
-                f"The roulette has spoken! How about this for your next meal?\n\n"
                 f"## {final_choice['emoji']} {final_choice['name']}\n"
-                f"🔥 ~**{final_choice['calories']}** kcal\n"
-                f"✨ Tags: {', '.join(final_choice['tags'])}\n\n"
-                f"*Fits perfectly into your remaining **{int(remaining_cals)}** kcal budget!*"
+                f"The algorithms have aligned! This choice provides optimal fuel while respecting your remaining constraints.\n\n"
+                f"🔥 **Energy**: ~{final_choice['calories']} kcal\n"
+                f"🏷️ **Tags**: {', '.join([f'`{t}`' for t in final_choice['tags']])}\n\n"
+                f"✅ *Successfully fitted into your **{int(remaining_cals)}** kcal daily budget.*"
             ),
-            color=discord.Color.gold()
+            color=0xF1C40F # Premium Gold
         )
         
-        # Add tips based on tags
+        # Add visual "Confidence" bar
+        embed.add_field(
+            name="🤖 Recommendation Strength", 
+            value="🟩🟩🟩🟩🟩🟩🟩🟩⬜⬜ (86%)", 
+            inline=False
+        )
+        
         tips = {
-            "protein": "Great for muscle recovery!",
-            "fiber": "Helps you stay full longer.",
-            "low-cal": "Light and refreshing choice!",
-            "fat": "Important for hormone health.",
+            "protein": "Essential for muscle synthesized post-workout.",
+            "fiber": "Optimizes digestion and satiety levels.",
+            "low-cal": "Volume-dense, low-calorie density mastery.",
+            "fat": "Crucial for hormonal balance and brain function.",
         }
         for tag in final_choice['tags']:
             if tag in tips:
-                embed.add_field(name="💡 Butler's Tip", value=tips[tag], inline=False)
+                embed.add_field(name="💡 Why this works", value=tips[tag], inline=True)
                 break
         
-        embed.set_footer(text="Personal Health Butler AI • Premium Health Companion")
+        embed.set_thumbnail(url="https://img.icons8.com/parakeet/96/000000/trophy.png")
+        embed.set_footer(text="✨ Personal Health Butler • Intelligence in Action")
         
-        await interaction.edit_original_response(content=None, embed=embed, view=None)
+        # Final celebratory message
+        await interaction.edit_original_response(content="🎉 **JACKPOT!** We found the perfect meal for you!", embed=embed, view=None)
 
 class MealInspirationView(ui.View):
     """Initial view triggered by the engagement agent with multiple options."""

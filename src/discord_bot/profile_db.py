@@ -146,6 +146,22 @@ class ProfileDB:
                 return response.data[0] if response.data else None
             raise
 
+    def delete_profile(self, discord_user_id: str) -> bool:
+        """Delete user profile from database.
+        
+        Args:
+            discord_user_id: Discord user ID
+            
+        Returns:
+            True if successful
+        """
+        try:
+            response = self.client.table("profiles").delete().eq("id", discord_user_id).execute()
+            return True
+        except Exception as exc:
+            print(f"DEBUG: Failed to delete profile for {discord_user_id}: {exc}")
+            return False
+
     # ============================================
     # Daily Logs Operations
     # ============================================
@@ -162,9 +178,9 @@ class ProfileDB:
         log_data = {
             "user_id": discord_user_id,
             "date": log_date.isoformat(),
-            "calories_intake": float(calories_intake),
-            "protein_g": float(protein_g),
-            "steps_count": int(steps_count),
+            "calories_intake": int(float(calories_intake)) if calories_intake else 0,
+            "protein_g": int(float(protein_g)) if protein_g else 0,
+            "steps_count": int(steps_count) if steps_count else 0,
         }
 
         response = self.client.table("daily_logs").upsert(log_data, on_conflict="user_id,date").execute()
@@ -208,10 +224,10 @@ class ProfileDB:
         meal_data = {
             "user_id": discord_user_id,
             "dish_name": dish_name,
-            "calories": float(calories),
-            "protein_g": float(protein_g),
-            "carbs_g": float(carbs_g),
-            "fat_g": float(fat_g),
+            "calories": int(float(calories)) if calories else 0,
+            "protein_g": int(float(protein_g)) if protein_g else 0,
+            "carbs_g": int(float(carbs_g)) if carbs_g else 0,
+            "fat_g": int(float(fat_g)) if fat_g else 0,
             "confidence_score": float(confidence_score),
         }
         

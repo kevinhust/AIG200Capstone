@@ -58,7 +58,26 @@ Instead of rigidly tracking calories, users can spin the "Food Roulette" to disc
 
 ---
 
-## 🚀 Quick Start
+## �️ User Commands
+
+The bot supports both Slash commands and Natural Language triggers.
+
+| Command | Description |
+| :--- | :--- |
+| `/setup` | Initialize or update your health profile (Step-by-step). |
+| `/demo` | Activate Demo Mode for quick testing/onboarding. |
+| `/exit` | Exit Demo Mode and clear temporary session data. |
+| `/reset` | **⚠️ Danger Zone:** Permanently clear your profile and history. |
+| `/settings` | Toggle morning check-ins and proactive notifications. |
+| `/trends` | Generate a 30-day health analytics report with AI insights. |
+| `/roulette` | Spin the 🎰 Food Roulette for budget-aware meal ideas. |
+| `Who am I?` | (Natural Language) Display your currently active health profile. |
+| `Summary` | (Natural Language) Get your real-time nutrition & activity report. |
+| `Help` | (Natural Language) List all available features and tips. |
+
+---
+
+## �🚀 Quick Start
 
 ### 1. Dependencies
 This prototype uses `pip` and `.env` configured environment variables.
