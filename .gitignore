@@ -54,3 +54,8 @@ venv/
 .DS_Store
 # IDE
 .vscode/
+
+# Machine Learning Models
+*.pt
+*.onnx
+*.weights

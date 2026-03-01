@@ -9,7 +9,7 @@ Provides persistent storage for:
 import os
 import json
 from typing import Dict, Any, Optional, List, Any as _Any
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 try:
     from supabase import create_client, Client  # type: ignore
 except Exception:  # pragma: no cover
@@ -474,6 +474,113 @@ class ProfileDB:
                 "recent_recommendations": recent_recommendations,
                 "routine_exercises": routine_exercises,
             }
+
+    def get_daily_aggregation(self, discord_user_id: str, log_date: Optional[date] = None) -> Dict[str, Any]:
+        """
+        Aggregate total health data for a specific day.
+        Includes Calories In (from meals) and Calories Out (from workout_logs).
+        """
+        target_date = log_date or date.today()
+        start = datetime.combine(target_date, datetime.min.time()).isoformat()
+        end = datetime.combine(target_date, datetime.max.time()).isoformat()
+
+        # 1. Total Calories In (Meals)
+        meal_res = self.client.table("meals")\
+            .select("calories, protein_g")\
+            .eq("user_id", discord_user_id)\
+            .gte("created_at", start)\
+            .lte("created_at", end)\
+            .execute()
+        
+        meals = meal_res.data or []
+        total_in = sum(float(m.get("calories", 0) or 0) for m in meals)
+        total_prot = sum(float(m.get("protein_g", 0) or 0) for m in meals)
+
+        # 2. Total Calories Out (Workout Logs)
+        # Note: We filter for 'completed' workouts to be accurate
+        workout_res = self.client.table("workout_logs")\
+            .select("kcal_estimate, duration_min")\
+            .eq("user_id", discord_user_id)\
+            .eq("status", "completed")\
+            .gte("created_at", start)\
+            .lte("created_at", end)\
+            .execute()
+        
+        workouts = workout_res.data or []
+        total_out = sum(float(w.get("kcal_estimate", 0) or 0) for w in workouts)
+        total_minutes = sum(int(w.get("duration_min", 0) or 0) for w in workouts)
+
+        return {
+            "date": target_date.isoformat(),
+            "calories_in": total_in,
+            "calories_out": total_out,
+            "net_calories": total_in - total_out,
+            "protein_g": total_prot,
+            "active_minutes": total_minutes,
+            "meal_count": len(meals),
+            "workout_count": len(workouts)
+        }
+
+    def get_historical_trends(self, discord_user_id: str, days: int = 30) -> List[Dict[str, Any]]:
+        """
+        Retrieve daily aggregated health data for the last N days.
+        """
+        end_date = date.today()
+        start_date = end_date - timedelta(days=days - 1)
+        
+        start_ts = datetime.combine(start_date, datetime.min.time()).isoformat()
+        end_ts = datetime.combine(end_date, datetime.max.time()).isoformat()
+
+        # 1. Fetch all meals in range
+        meal_res = self.client.table("meals")\
+            .select("calories, protein_g, created_at")\
+            .eq("user_id", discord_user_id)\
+            .gte("created_at", start_ts)\
+            .lte("created_at", end_ts)\
+            .execute()
+        meals = meal_res.data or []
+
+        # 2. Fetch all completed workouts in range
+        workout_res = self.client.table("workout_logs")\
+            .select("kcal_estimate, duration_min, created_at")\
+            .eq("user_id", discord_user_id)\
+            .eq("status", "completed")\
+            .gte("created_at", start_ts)\
+            .lte("created_at", end_ts)\
+            .execute()
+        workouts = workout_res.data or []
+
+        # 3. Aggregate by date
+        daily_stats = {}
+        for i in range(days):
+            d = start_date + timedelta(days=i)
+            d_str = d.isoformat()
+            daily_stats[d_str] = {
+                "date": d_str,
+                "calories_in": 0.0,
+                "calories_out": 0.0,
+                "protein_g": 0.0,
+                "active_minutes": 0,
+                "meal_count": 0,
+                "workout_count": 0
+            }
+
+        for m in meals:
+            m_date = datetime.fromisoformat(m["created_at"].split("T")[0]).date().isoformat()
+            if m_date in daily_stats:
+                daily_stats[m_date]["calories_in"] += float(m.get("calories", 0) or 0)
+                daily_stats[m_date]["protein_g"] += float(m.get("protein_g", 0) or 0)
+                daily_stats[m_date]["meal_count"] += 1
+
+        for w in workouts:
+            w_date = datetime.fromisoformat(w["created_at"].split("T")[0]).date().isoformat()
+            if w_date in daily_stats:
+                daily_stats[w_date]["calories_out"] += float(w.get("kcal_estimate", 0) or 0)
+                daily_stats[w_date]["active_minutes"] += int(w.get("duration_min", 0) or 0)
+                daily_stats[w_date]["workout_count"] += 1
+
+        # Return sorted list
+        return sorted(daily_stats.values(), key=lambda x: x["date"])
 
 
 # Singleton instance for app-wide use

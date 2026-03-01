@@ -20,7 +20,13 @@ import discord
 from discord import Intents, Client, Embed
 from discord.ext import commands, tasks
 
-from swarm import HealthSwarm
+from src.swarm import HealthSwarm
+from src.discord_bot.embed_builder import HealthButlerEmbed
+from src.discord_bot.modals import RegistrationModal
+from src.discord_bot.views import RegistrationViewA, RegistrationViewB, LogWorkoutView, SettingsView
+from src.discord_bot.roulette_view import RouletteView, MealInspirationView
+from src.agents.engagement.engagement_agent import EngagementAgent
+from src.agents.analytics.analytics_agent import AnalyticsAgent
 from src.discord_bot.profile_db import get_profile_db, ProfileDB
 from aiohttp import web
 
@@ -358,114 +364,7 @@ def _normalize_gender(gender_raw: str) -> str:
     return "Other"
 
 
-class LogWorkoutView(discord.ui.View):
-    """Refined Interactive buttons for Fitness Agent recommendations."""
-    def __init__(self, data: Dict[str, Any], user_id: str):
-        super().__init__(timeout=None)
-        self.data = data
-        self.user_id = user_id
-        self.recommendations = data.get("recommendations", [])
-
-    def _primary_exercise(self) -> Dict[str, Any]:
-        return self.recommendations[0] if self.recommendations else {"name": "Exercise", "duration_min": 20, "kcal_estimate": 80, "reason": "General movement"}
-
-    @discord.ui.button(label='Log Workout', style=discord.ButtonStyle.green, emoji='💪')
-    async def log_workout(self, interaction: discord.Interaction, button: discord.ui.Button):
-        exercise = self._primary_exercise()
-        if profile_db:
-            try:
-                profile_db.log_workout_event(
-                    discord_user_id=self.user_id,
-                    exercise_name=exercise.get("name", "Exercise"),
-                    duration_min=int(exercise.get("duration_min", 20) or 20),
-                    kcal_estimate=float(exercise.get("kcal_estimate", 80) or 80),
-                    status="completed",
-                    source="fitness_button",
-                    raw_payload=exercise,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to persist workout log: {e}")
-
-        await interaction.response.send_message(
-            f"🎯 **Activity Logged!**\nGoal: {exercise.get('name', 'Exercise')}\nKeep up the great work!",
-            ephemeral=True
-        )
-
-    @discord.ui.button(label='Add To Routine', style=discord.ButtonStyle.blurple, emoji='📌')
-    async def add_to_routine(self, interaction: discord.Interaction, button: discord.ui.Button):
-        exercise = self._primary_exercise()
-        if profile_db:
-            try:
-                profile_db.add_routine_exercise(
-                    discord_user_id=self.user_id,
-                    exercise_name=exercise.get("name", "Exercise"),
-                    target_per_week=3,
-                    metadata=exercise,
-                )
-                await interaction.response.send_message(
-                    f"📌 Added **{exercise.get('name', 'Exercise')}** to your weekly routine.",
-                    ephemeral=True,
-                )
-                return
-            except Exception as e:
-                logger.warning(f"Failed to add routine item: {e}")
-
-        await interaction.response.send_message(
-            "⚠️ Routine tracking is temporarily unavailable (database not connected).",
-            ephemeral=True,
-        )
-
-    @discord.ui.button(label='More Options', style=discord.ButtonStyle.gray, emoji='🔄')
-    async def more_options(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message(
-            "🔄 Searching for alternative exercises that match your profile...",
-            ephemeral=True
-        )
-
-    @discord.ui.button(label='View Progress', style=discord.ButtonStyle.gray, emoji='📈')
-    async def view_progress(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not profile_db:
-            await interaction.response.send_message(
-                "⚠️ Progress tracking is unavailable until Supabase is connected.",
-                ephemeral=True,
-            )
-            return
-
-        try:
-            progress = profile_db.get_workout_progress(self.user_id, days=7)
-            recent_recs = progress.get("recent_recommendations", []) or []
-            routine_exercises = progress.get("routine_exercises", []) or []
-
-            recommendation_line = "• Latest recommendations: **None yet**"
-            if recent_recs:
-                recommendation_line = f"• Latest recommendations: **{', '.join(recent_recs[:3])}**"
-
-            routine_line = f"• Current routine items: **{progress.get('routine_count', 0)}**"
-            if routine_exercises:
-                routine_line += f" ({', '.join(routine_exercises[:3])})"
-
-            msg = (
-                "📈 **7-Day Progress**\n"
-                f"• Suggested workouts: **{progress.get('recommended_count', 0)}**\n"
-                f"• Completed workouts: **{progress.get('completed_count', 0)}**\n"
-                f"• Total active minutes: **{progress.get('total_minutes', 0)}**\n"
-                f"• Estimated kcal burned: **{progress.get('total_kcal', 0):.0f}**\n"
-                f"{recommendation_line}\n"
-                f"{routine_line}"
-            )
-            await interaction.response.send_message(msg, ephemeral=True)
-        except Exception as e:
-            logger.warning(f"Failed to fetch workout progress: {e}")
-            await interaction.response.send_message(
-                "⚠️ Could not load progress right now. Try again in a moment.",
-                ephemeral=True,
-            )
-
-    @discord.ui.button(label='Safety Info', style=discord.ButtonStyle.red, emoji='🛡️')
-    async def safety_info(self, interaction: discord.Interaction, button: discord.ui.Button):
-        warnings = self.data.get("safety_warnings", [])
-        msg = "**Safety Details**:\n" + ("\n".join([f"- {w}" for w in warnings]) if warnings else "No specific restrictions noted for this request.")
-        await interaction.response.send_message(msg, ephemeral=True)
+# LogWorkoutView moved to src.discord_bot.views.py
 
 
 def _apply_serving_multiplier(nutrition_payload: Dict[str, Any], multiplier: float, dish_override: Optional[str] = None) -> Dict[str, Any]:
@@ -790,203 +689,42 @@ class MealLogView(discord.ui.View):
         await self.bot._send_daily_summary_embed(interaction.channel, self.user_id)
 
 
-class DietSelectView(discord.ui.View):
-    """Step 5: Dietary Preferences Multi-Select View"""
-    def __init__(self, user_id):
-        self.user_id = user_id
-        # In unit tests, there may be no running event loop; discord.py View init
-        # would raise. Skip initialization in that case since tests call callbacks
-        # directly without relying on UI internals.
-        try:
-            super().__init__(timeout=300)
-        except RuntimeError:
-            pass
 
-    @discord.ui.select(
-        placeholder="Select Dietary Preferences...",
-        min_values=0,
-        max_values=5,
-        options=[
-            discord.SelectOption(label="No Restrictions", emoji="✅", value="None"),
-            discord.SelectOption(label="Vegetarian", emoji="🥗", value="Vegetarian"),
-            discord.SelectOption(label="Vegan", emoji="🌱", value="Vegan"),
-            discord.SelectOption(label="Halal", emoji="🕌", value="Halal"),
-            discord.SelectOption(label="Keto", emoji="🥓", value="Keto"),
-            discord.SelectOption(label="Gluten-Free", emoji="🌾", value="Gluten-Free"),
-            discord.SelectOption(label="Dairy-Free", emoji="🥛", value="Dairy-Free"),
-        ]
+
+
+async def _on_registration_modal_submit(interaction: discord.Interaction, data: Dict[str, Any]):
+    """Callback for v4.1 simplified RegistrationModal (Step 1/3)"""
+    user_id = str(interaction.user.id)
+    global _demo_user_profile
+    
+    # Initialize/Update profile buffer with metrics
+    _demo_user_profile[user_id] = {
+        "name": data["name"],
+        "age": data["age"],
+        "height_cm": data["height_cm"],
+        "weight_kg": data["weight_kg"],
+        "meals": []
+    }
+    
+    # Send Progress Embed (Step 2/3 🟢🟢⚪) and RegistrationViewA
+    embed = HealthButlerEmbed.build_progress_embed(
+        step=2,
+        total_steps=3,
+        title="Biological Profile",
+        description=(
+            f"Thanks **{data['name']}**! We've noted your metrics.\n"
+            "Now, please select your **Biological Sex**, **Health Goal**, and **Activity Level** to calibrate your plan."
+        )
     )
-    async def select_diet(self, interaction: discord.Interaction, select: discord.ui.Select):
-        if str(interaction.user.id) != self.user_id:
-            return await interaction.response.send_message("This setup is for someone else!", ephemeral=True)
-
-        global demo_mode, _demo_user_profile, demo_user_id
-        user_id = str(interaction.user.id)
-
-        # Update existing profile (don't overwrite!)
-        if user_id not in _demo_user_profile:
-            _demo_user_profile[user_id] = {"meals": []}
-        _demo_user_profile[user_id]["diet"] = select.values
-        if "meals" not in _demo_user_profile[user_id]:
-            _demo_user_profile[user_id]["meals"] = []
-
-        demo_mode = True
-        demo_user_id = user_id
-
-        # Save to Supabase
-        saved = save_user_profile(demo_user_id, _demo_user_profile[user_id])
-        warning = ""
-        if not saved:
-            warning = "\n⚠️ We could not persist your profile to Supabase yet. Your inputs are kept in this session.\n"
-
-        await interaction.response.edit_message(
-            content=(
-                f"✅ Core profile captured.{warning}\n"
-                "**Step 6/6: Personalization Signals**\n"
-                "Add lifestyle preferences so recommendations can be highly personalized."
-            ),
-            view=PersonalizationSetupView(user_id),
-        )
-
-
-class ActivitySelectView(discord.ui.View):
-    def __init__(self, user_id):
-        super().__init__(timeout=300)
-        self.user_id = user_id
-
-    @discord.ui.select(
-        placeholder="Select Activity Level...",
-        options=[
-            discord.SelectOption(label="Sedentary", description="Desk job, little exercise", emoji="🪑"),
-            discord.SelectOption(label="Lightly Active", description="1-3 days/week exercise", emoji="🚶"),
-            discord.SelectOption(label="Moderately Active", description="3-5 days/week exercise", emoji="🏃"),
-            discord.SelectOption(label="Very Active", description="6-7 days/week exercise", emoji="🏋️"),
-            discord.SelectOption(label="Extra Active", description="Physical job + training", emoji="🔥"),
-        ]
+    
+    # Instantiate the new modular view
+    view = RegistrationViewA(user_id, _demo_user_profile[user_id], HealthButlerEmbed)
+    
+    await interaction.response.send_message(
+        embed=embed,
+        view=view,
+        ephemeral=True
     )
-    async def select_activity(self, interaction: discord.Interaction, select: discord.ui.Select):
-        if str(interaction.user.id) != self.user_id:
-            return await interaction.response.send_message("This setup is for someone else!", ephemeral=True)
-
-        global _demo_user_profile
-        _demo_user_profile[self.user_id]["activity"] = select.values[0]
-        await interaction.response.edit_message(
-            content="**Step 5/6: Dietary Preferences**\nSelect any dietary restrictions or preferences:",
-            view=DietSelectView(self.user_id)
-        )
-
-
-class ConditionSelectView(discord.ui.View):
-    def __init__(self, user_id):
-        super().__init__(timeout=300)
-        self.user_id = user_id
-
-    @discord.ui.select(
-        placeholder="Select Health Conditions...",
-        min_values=0,
-        max_values=4,
-        options=[
-            discord.SelectOption(label="No Conditions", emoji="✅", value="None"),
-            discord.SelectOption(label="Knee Injury / Pain", emoji="🦵", value="Knee Injury"),
-            discord.SelectOption(label="High Blood Pressure", emoji="💓", value="Hypertension"),
-            discord.SelectOption(label="Diabetes", emoji="🩸", value="Diabetes"),
-            discord.SelectOption(label="Lower Back Pain", emoji="🔙", value="Lower Back Pain"),
-        ]
-    )
-    async def select_conditions(self, interaction: discord.Interaction, select: discord.ui.Select):
-        if str(interaction.user.id) != self.user_id:
-            return await interaction.response.send_message("This setup is for someone else!", ephemeral=True)
-
-        global _demo_user_profile
-        _demo_user_profile[self.user_id]["conditions"] = select.values if "None" not in select.values else []
-        await interaction.response.edit_message(
-            content="**Step 4/6: Activity Level**\nHow active are you on a weekly basis?",
-            view=ActivitySelectView(self.user_id)
-        )
-
-
-class GoalSelectView(discord.ui.View):
-    def __init__(self, user_id):
-        super().__init__(timeout=300)
-        self.user_id = user_id
-
-    @discord.ui.select(
-        placeholder="Select Health Goal...",
-        options=[
-            discord.SelectOption(label="Lose Weight", description="Calorie deficit focus", emoji="📉"),
-            discord.SelectOption(label="Maintain", description="Balanced nutrition focus", emoji="⚖️"),
-            discord.SelectOption(label="Gain Muscle", description="Calorie surplus/protein focus", emoji="📈"),
-        ]
-    )
-    async def select_goal(self, interaction: discord.Interaction, select: discord.ui.Select):
-        if str(interaction.user.id) != self.user_id:
-            return await interaction.response.send_message("This setup is for someone else!", ephemeral=True)
-
-        global _demo_user_profile
-        _demo_user_profile[self.user_id]["goal"] = select.values[0]
-        await interaction.response.edit_message(
-            content="**Step 3/6: Health Conditions**\n(Phase 5 Safety Integration) Select any conditions to enable safety filtering:",
-            view=ConditionSelectView(self.user_id)
-        )
-
-
-class HealthProfileModal(discord.ui.Modal, title='Step 1/6: Basic Information'):
-    user_name = discord.ui.TextInput(label='Name', placeholder='Kevin Wang', min_length=2, max_length=50)
-    age = discord.ui.TextInput(label='Age (18-100)', placeholder='35', min_length=1, max_length=3)
-    gender = discord.ui.TextInput(label='Gender', placeholder='Male / Female', min_length=1, max_length=10)
-    height = discord.ui.TextInput(label='Height (cm)', placeholder='175', min_length=2, max_length=3)
-    weight = discord.ui.TextInput(label='Weight (kg)', placeholder='90', min_length=2, max_length=3)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        global _demo_user_profile
-        user_id = str(interaction.user.id)
-
-        try:
-            name = str(self.user_name.value).strip()
-            age = int(str(self.age.value).strip())
-            height = float(str(self.height.value).strip())
-            weight = float(str(self.weight.value).strip())
-            gender = _normalize_gender(str(self.gender.value))
-
-            if len(name) < 2:
-                return await interaction.response.send_message(
-                    "⚠️ Name must be at least 2 characters.",
-                    ephemeral=True,
-                )
-            if age < 13 or age > 100:
-                return await interaction.response.send_message(
-                    "⚠️ Age must be between 13 and 100.",
-                    ephemeral=True,
-                )
-            if height < 120 or height > 230:
-                return await interaction.response.send_message(
-                    "⚠️ Height must be between 120 and 230 cm.",
-                    ephemeral=True,
-                )
-            if weight < 30 or weight > 300:
-                return await interaction.response.send_message(
-                    "⚠️ Weight must be between 30 and 300 kg.",
-                    ephemeral=True,
-                )
-        except Exception:
-            return await interaction.response.send_message(
-                "⚠️ Please enter valid numeric values for age, height, and weight.",
-                ephemeral=True,
-            )
-
-        # Initialize temporary demo profile in memory
-        _demo_user_profile[user_id] = {
-            "name": name,
-            "age": age,
-            "gender": gender,
-            "height": height,
-            "weight": weight,
-            "meals": []
-        }
-        await interaction.response.send_message(
-            "✅ Basic information saved.\n\n**Step 2/6: Health Goal**\nWhat is your primary objective?",
-            view=GoalSelectView(user_id)
-        )
 
 
 class StartSetupView(discord.ui.View):
@@ -995,159 +733,10 @@ class StartSetupView(discord.ui.View):
 
     @discord.ui.button(label='Start Setup', style=discord.ButtonStyle.green, emoji='🚀')
     async def start_setup(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(HealthProfileModal())
+        await interaction.response.send_modal(RegistrationModal(on_submit_callback=_on_registration_modal_submit))
 
 
-class PersonalizationSetupView(discord.ui.View):
-    """Step 6: Additional profile signals for highly personalized recommendations."""
 
-    def __init__(self, user_id: str):
-        super().__init__(timeout=300)
-        self.user_id = user_id
-
-    @discord.ui.button(label='Add Personalization Details', style=discord.ButtonStyle.green, emoji='🧠')
-    async def add_personalization(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if str(interaction.user.id) != self.user_id:
-            return await interaction.response.send_message("This setup is for someone else!", ephemeral=True)
-
-        await interaction.response.send_modal(PersonalizationModal(self.user_id))
-
-
-class PersonalizationModal(discord.ui.Modal, title='Step 6/6: Personalization Signals'):
-    sleep_hours = discord.ui.TextInput(
-        label='Average Sleep Hours',
-        placeholder='7.5',
-        min_length=1,
-        max_length=4,
-    )
-    stress_level = discord.ui.TextInput(
-        label='Stress Level (1-10)',
-        placeholder='4',
-        min_length=1,
-        max_length=2,
-    )
-    workout_days_per_week = discord.ui.TextInput(
-        label='Workout Days Per Week (1-7)',
-        placeholder='4',
-        min_length=1,
-        max_length=1,
-    )
-    session_minutes = discord.ui.TextInput(
-        label='Preferred Session Minutes (10-180)',
-        placeholder='35',
-        min_length=2,
-        max_length=3,
-    )
-    motivation_style = discord.ui.TextInput(
-        label='Motivation Style (gentle/balanced/strict)',
-        placeholder='balanced',
-        min_length=4,
-        max_length=20,
-    )
-
-    def __init__(self, user_id: str):
-        self.user_id = user_id
-        # In unit tests, there may be no running event loop; discord.py Modal/View init
-        # would raise. Skip initialization in that case (tests set input values manually).
-        try:
-            super().__init__()
-        except RuntimeError:
-            # Ensure inputs exist as instance attrs for tests.
-            self.sleep_hours = getattr(self, "sleep_hours", discord.ui.TextInput(label="Average Sleep Hours"))
-            self.stress_level = getattr(self, "stress_level", discord.ui.TextInput(label="Stress Level (1-10)"))
-            self.workout_days_per_week = getattr(
-                self, "workout_days_per_week", discord.ui.TextInput(label="Workout Days Per Week (1-7)")
-            )
-            self.session_minutes = getattr(
-                self, "session_minutes", discord.ui.TextInput(label="Preferred Session Minutes (10-180)")
-            )
-            self.motivation_style = getattr(
-                self, "motivation_style", discord.ui.TextInput(label="Motivation Style (gentle/balanced/strict)")
-            )
-
-    async def on_submit(self, interaction: discord.Interaction):
-        if str(interaction.user.id) != self.user_id:
-            return await interaction.response.send_message("This setup is for someone else!", ephemeral=True)
-
-        global demo_mode, _demo_user_profile, demo_user_id
-        user_id = str(interaction.user.id)
-
-        try:
-            sleep = float(str(self.sleep_hours.value).strip())
-            stress = int(str(self.stress_level.value).strip())
-            days = int(str(self.workout_days_per_week.value).strip())
-            minutes = int(str(self.session_minutes.value).strip())
-            motivation = str(self.motivation_style.value).strip().lower()
-
-            if sleep < 3 or sleep > 12:
-                return await interaction.response.send_message("⚠️ Sleep hours must be between 3 and 12.", ephemeral=True)
-            if stress < 1 or stress > 10:
-                return await interaction.response.send_message("⚠️ Stress level must be between 1 and 10.", ephemeral=True)
-            if days < 1 or days > 7:
-                return await interaction.response.send_message("⚠️ Workout days must be between 1 and 7.", ephemeral=True)
-            if minutes < 10 or minutes > 180:
-                return await interaction.response.send_message("⚠️ Session minutes must be between 10 and 180.", ephemeral=True)
-            if motivation not in {"gentle", "balanced", "strict", "data-driven"}:
-                return await interaction.response.send_message(
-                    "⚠️ Motivation style must be one of: gentle, balanced, strict, data-driven.",
-                    ephemeral=True,
-                )
-        except Exception:
-            return await interaction.response.send_message(
-                "⚠️ Invalid personalization inputs. Please provide valid numeric values.",
-                ephemeral=True,
-            )
-
-        if user_id not in _demo_user_profile:
-            _demo_user_profile[user_id] = {"meals": []}
-
-        _demo_user_profile[user_id]["preferences"] = {
-            "sleep_hours": sleep,
-            "stress_level": stress,
-            "workout_days_per_week": days,
-            "session_minutes": minutes,
-            "motivation_style": motivation,
-        }
-
-        demo_mode = True
-        demo_user_id = user_id
-        saved = save_user_profile(demo_user_id, _demo_user_profile[user_id])
-
-        profile = _demo_user_profile[user_id]
-        prefs = profile.get("preferences", {})
-        summary = (
-            "🎉 **Registration Complete!**\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 **Profile Ready** ({'Persisted to Database' if saved else 'Saved In-Session'})\n"
-            f"• Name: `{profile.get('name', 'N/A')}`\n"
-            f"• Age: `{profile.get('age', 'N/A')}` | Gender: `{profile.get('gender', 'N/A')}`\n"
-            f"• Metrics: `{profile.get('height', 'N/A')}cm / {profile.get('weight', 'N/A')}kg`\n"
-            f"• Goal: `{profile.get('goal', 'N/A')}`\n"
-            f"• Conditions: `{', '.join(profile.get('conditions', [])) or 'None'}`\n"
-            f"• Activity: `{profile.get('activity', 'N/A')}`\n"
-            f"• Diet: `{', '.join(profile.get('diet', [])) or 'None'}`\n"
-            "🧠 **Personalization Signals**\n"
-            f"• Sleep: `{prefs.get('sleep_hours', 'N/A')}h` | Stress: `{prefs.get('stress_level', 'N/A')}/10`\n"
-            f"• Workout Days: `{prefs.get('workout_days_per_week', 'N/A')}` | Session: `{prefs.get('session_minutes', 'N/A')} min`\n"
-            f"• Motivation Style: `{prefs.get('motivation_style', 'N/A')}`\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            + (
-                "💾 **Your profile is saved!** Data persists across sessions.\n\n"
-                if saved
-                else "⚠️ **Profile is currently only in session memory.** Please check Supabase config/schema.\n\n"
-            )
-            +
-            "✨ You can now ask health questions or upload food photos!"
-        )
-
-        await interaction.response.send_message(summary, ephemeral=True)
-        await interaction.client.change_presence(
-            activity=discord.Activity(
-                type=discord.ActivityType.listening,
-                name="[Demo Mode] " + DISCORD_ACTIVITY
-            )
-        )
-        logger.info(f"✅ Full Demo registration complete for {interaction.user.display_name}")
 
 
 class HealthButlerDiscordBot(Client):
@@ -1174,31 +763,36 @@ class HealthButlerDiscordBot(Client):
         # Optional demo safety allowlists (comma-separated IDs). Empty => allow all.
         self.allowed_user_ids = _parse_int_set(os.getenv("DISCORD_ALLOWED_USER_IDS"))
         self.allowed_channel_ids = _parse_int_set(os.getenv("DISCORD_ALLOWED_CHANNEL_IDS"))
-        logger.info("Health Butler Discord Bot initialized")
-
-    @tasks.loop(time=[time(7, 30, tzinfo=LOCAL_TZ), time(20, 0, tzinfo=LOCAL_TZ)])
-    async def daily_summary_loop(self):
-        """Phase 7 Refinement: Proactive Daily Summaries with Timezone."""
-        global demo_mode, demo_user_id
-        if demo_mode and demo_user_id:
-            try:
-                user = await self.fetch_user(int(demo_user_id))
-                if user:
-                    now = datetime.now(LOCAL_TZ)
-                    if now.hour < 12:
-                        msg = "☀️ **Good Morning!**\nTime for a healthy breakfast. Today's goal: Stay within your calorie target!"
-                    else:
-                        msg = "🌙 **Evening Summary**\nYou've done great today! Suggested evening activity: 15min light stretching."
-                    await user.send(msg)
-                    logger.info(f"📬 Sent daily summary to {user.display_name}")
-            except Exception as e:
-                logger.error(f"Failed to send scheduled summary: {e}")
+        self.engagement_agent = EngagementAgent()
+        self.analytics_agent = AnalyticsAgent()
+        logger.info("Health Butler Discord Bot initialized with Engagement and Analytics Agents")
 
     async def setup_hook(self):
-        logger.info("Bot setup_hook executed: starting summary loop")
-        self.daily_summary_loop.start()
+        logger.info("Bot setup_hook: starting proactive loops")
+        # Start loops
+        if not self.morning_checkin.is_running():
+            self.morning_checkin.start()
+        if not self.nightly_summary.is_running():
+            self.nightly_summary.start()
+        
         # Start health check server within the loop
         asyncio.create_task(self._start_health_server())
+
+    async def _send_proactive_message(self, user_id: str, embed: discord.Embed, view: Optional[discord.ui.View] = None):
+        """Helper to send proactive DM to user if allowed."""
+        try:
+            profile = get_user_profile(user_id)
+            # Check privacy toggle
+            prefs = profile.get("preferences", {})
+            if not prefs.get("allow_proactive_notifications", True):
+                return
+
+            user = await self.fetch_user(int(user_id))
+            if user:
+                await user.send(embed=embed, view=view)
+                logger.info(f"📬 Sent proactive message to {user.display_name}")
+        except Exception as e:
+            logger.error(f"Failed to send proactive message to {user_id}: {e}")
 
     async def _start_health_server(self):
         """Minimal HTTP server for Cloud Run health checks."""
@@ -1213,6 +807,95 @@ class HealthButlerDiscordBot(Client):
 
     async def on_ready(self):
         logger.info(f"✅ Bot logged in as {self.user} (ID: {self.user.id})")
+        # Start proactive tasks (Phase 4 & 6)
+        if not self.morning_checkin.is_running():
+            self.morning_checkin.start()
+        if not self.nightly_summary.is_running():
+            self.nightly_summary.start()
+        if not self.pre_meal_reminder.is_running():
+            self.pre_meal_reminder.start()
+
+    @tasks.loop(time=time(8, 0, tzinfo=LOCAL_TZ))
+    async def morning_checkin(self):
+        """Proactive morning check-in (Phase 4)."""
+        logger.info("🌤️ Running scheduled morning health check-ins...")
+        
+        # In a real production bot, we would iterate over all active users in Supabase.
+        # For this implementation, we'll process the cached users who have opted in.
+        for user_id in list(_user_profiles_cache.keys()):
+            profile = _user_profiles_cache[user_id]
+            
+            # Generate personalized greeting
+            result = await self.engagement_agent.generate_morning_greeting(profile)
+            
+            embed = discord.Embed(
+                title=f"☀️ Good Morning, {profile.get('name', 'there')}!",
+                description=result.get("greeting", "Ready for a healthy day?"),
+                color=discord.Color.gold()
+            )
+            embed.add_field(name="🎯 Today's Focus", value=result.get("focus_goal", profile.get("goal")), inline=False)
+            embed.add_field(name="💡 Butler Tip", value=result.get("tip", "Remember to stay hydrated!"), inline=False)
+            embed.set_footer(text="Settings: Use /settings to manage notifications")
+            
+            await self._send_proactive_message(user_id, embed)
+
+    @tasks.loop(time=time(21, 30, tzinfo=LOCAL_TZ))
+    async def nightly_summary(self):
+        """Proactive nightly summary (Phase 4)."""
+        logger.info("🌙 Running scheduled nightly health summaries...")
+        
+        for user_id in list(_user_profiles_cache.keys()):
+            # 1. Aggregate today's data (Meals + Workouts)
+            if profile_db:
+                aggregation = profile_db.get_daily_aggregation(user_id)
+                profile = get_user_profile(user_id)
+                
+                # 2. Generate AI Insight
+                report = await self.engagement_agent.generate_daily_report(aggregation, profile)
+                
+                embed = discord.Embed(
+                    title="📊 Daily Health Report",
+                    description=report.get("summary_text", "Here is your summary for today."),
+                    color=discord.Color.purple() if report.get("status") == "on_track" else discord.Color.orange()
+                )
+                
+                embed.add_field(name="🍽️ Intake", value=f"{aggregation['calories_in']:.0f} kcal", inline=True)
+                embed.add_field(name="🏋️ Burned", value=f"{aggregation['calories_out']:.0f} kcal", inline=True)
+                embed.add_field(name="⚖️ Net", value=f"{aggregation['net_calories']:.0f} kcal", inline=True)
+                embed.add_field(name="🚀 Tomorrow", value=report.get("tomorrow_tip", "Keep up the momentum!"), inline=False)
+                
+                await self._send_proactive_message(user_id, embed)
+
+    @tasks.loop(time=[time(11, 30, tzinfo=LOCAL_TZ), time(17, 30, tzinfo=LOCAL_TZ)])
+    async def pre_meal_reminder(self):
+        """Active inspiration for upcoming meals (Phase 6)."""
+        logger.info("🎰 Running scheduled pre-meal inspiration checks...")
+        for user_id in list(_user_profiles_cache.keys()):
+            try:
+                profile = get_user_profile(user_id)
+                stats = profile_db.get_today_stats(user_id) if profile_db else {"total_calories": 0}
+                target = calculate_daily_target(profile)
+                remaining = {"calories": max(0, target - stats["total_calories"])}
+                
+                embed = discord.Embed(
+                    title="🥗 Time for a boost?",
+                    description=(
+                        f"Hi **{profile.get('name', 'there')}**! It's almost meal time.\n"
+                        f"You have **{int(remaining['calories'])} kcal** remaining in your daily budget.\n\n"
+                        "Need some healthy inspiration? Try the **Food Roulette** below!"
+                    ),
+                    color=discord.Color.green()
+                )
+                view = MealInspirationView(user_id, remaining)
+                await self._send_proactive_message(user_id, embed, view=view)
+            except Exception as e:
+                logger.error(f"Error in pre_meal_reminder for {user_id}: {e}")
+
+    @morning_checkin.before_loop
+    @nightly_summary.before_loop
+    @pre_meal_reminder.before_loop
+    async def before_loops(self):
+        await self.wait_until_ready()
 
     def _persist_chat_message(self, user_id: str, role: str, content: str) -> None:
         """Persist chat message to Supabase with safe type normalization."""
@@ -1248,6 +931,50 @@ class HealthButlerDiscordBot(Client):
 
         if message.content.strip().lower().startswith("/demo"):
             await self._handle_demo_command(message)
+            return
+
+        if message.content.strip().lower() == "/settings":
+            profile = get_user_profile(author_id)
+            embed = discord.Embed(
+                title="⚙️ Health Butler Settings",
+                description="Manage your notification and privacy preferences.",
+                color=discord.Color.blue()
+            )
+            allow_proactive = profile.get("preferences", {}).get("allow_proactive_notifications", True)
+            status_text = "✅ Enabled" if allow_proactive else "❌ Disabled"
+            embed.add_field(name="Proactive Notifications", value=f"Current status: {status_text}", inline=False)
+            
+            await message.channel.send(embed=embed, view=SettingsView(author_id, profile))
+            return
+
+        if message.content.strip().lower() == "/trends":
+            profile = get_user_profile(author_id)
+            if not profile or not profile.get("name"):
+                await message.channel.send("⚠️ You need to complete your profile first! Use `/setup` or type anything health-related.")
+                return
+
+            await message.channel.send("🔍 Analyzing your health trends... this may take a moment.")
+            
+            # 1. Fetch 30-day data
+            if profile_db:
+                historical_data = profile_db.get_historical_trends(author_id, days=30)
+                
+                # 2. Process with AnalyticsAgent
+                analysis = await self.analytics_agent.analyze_trends(historical_data, profile)
+                
+                # 3. Build & Send Embed
+                embed = HealthButlerEmbed.build_trends_embed(
+                    user_name=profile.get("name", "User"),
+                    trend_data=analysis,
+                    historical_raw=historical_data
+                )
+                await message.channel.send(embed=embed)
+            else:
+                await message.channel.send("⚠️ Database not available for trend analysis.")
+            return
+
+        if message.content.strip().lower().startswith("!settings"):
+            await self._handle_settings_command(message)
             return
 
         if message.content.strip().lower() in ("/exit", "/quit"):
@@ -1305,21 +1032,35 @@ class HealthButlerDiscordBot(Client):
             }
 
             async with message.channel.typing():
-                # Run sync swarm execution in a thread to keep Discord heartbeat alive
-                loop = asyncio.get_event_loop()
                 if image_attachment:
                     image_path = f"/tmp/{image_attachment.filename}"
                     await image_attachment.save(image_path)
-                    result = await asyncio.to_thread(
-                        self.swarm.execute, 
-                        user_input="Analyze this meal", 
-                        image_path=image_path, 
-                        user_context=user_context
-                    )
-                    os.remove(image_path)
+                    
+                    # Iterative status message for streaming feedback
+                    status_msg = await message.channel.send("📸 *Image received, analyzing components...*")
+                    
+                    async def progress_update(state: str, status_text: str):
+                        try:
+                            await status_msg.edit(content=status_text)
+                        except Exception:
+                            pass
+
+                    try:
+                        result = await self.swarm.execute_async(
+                            user_input="Analyze this meal", 
+                            image_path=image_path, 
+                            user_context=user_context,
+                            progress_callback=progress_update
+                        )
+                    finally:
+                        if os.path.exists(image_path):
+                            os.remove(image_path)
+                        try:
+                            await status_msg.delete()
+                        except Exception:
+                            pass
                 else:
-                    result = await asyncio.to_thread(
-                        self.swarm.execute, 
+                    result = await self.swarm.execute_async(
                         user_input=message.content, 
                         user_context=user_context
                     )
@@ -1395,10 +1136,12 @@ class HealthButlerDiscordBot(Client):
                         await channel.send(embed=embed, view=view)
                     else:
                         await channel.send(embed=embed)
-                elif "summary" in data and "recommendations" in data:
-                    embed = self._build_fitness_embed(data)
+                elif "summary" in data and ("recommendations" in data or "exercises" in data):
+                    user_profile = get_user_profile(str(interaction_user_id))
+                    display_name = user_profile.get("name") or "User"
+                    embed = self._build_fitness_embed(data, user_name=display_name)
                     await self._persist_fitness_plan(data, interaction_user_id)
-                    await channel.send(embed=embed, view=LogWorkoutView(data, interaction_user_id))
+                    await channel.send(embed=embed, view=LogWorkoutView(self, data, interaction_user_id))
                 else:
                     # Fallback for other specialist agents or generic JSON
                     embed = Embed(title="💎 Health Butler Analysis", color=discord.Color.blue())
@@ -1704,6 +1447,23 @@ class HealthButlerDiscordBot(Client):
             )
             embed.add_field(name="📊 Macros Breakdown", value=breakdown, inline=False)
 
+        # Phase 6: Daily Impact & Remaining Budget
+        dv = data.get("daily_value_percentage", {})
+        budget = data.get("remaining_budget", {})
+        if dv or budget:
+            def render_impact_line(label, current_pct, remaining_val, unit="", marker="🟧"):
+                filled = int(min(100, current_pct) / 10)
+                bar = marker * filled + "⬜" * (10 - filled)
+                return f"**{label}**: `{bar}` **{current_pct:.1f}%**\n➡️ *Remaining: {remaining_val} {unit}*"
+
+            impact_text = (
+                render_impact_line("Calories", dv.get("calories", 0), budget.get("calories", 0), "kcal", "🟧") + "\n" +
+                render_impact_line("Protein", dv.get("protein", 0), budget.get("protein", 0), "g", "🟦") + "\n" +
+                render_impact_line("Carbs", dv.get("carbs", 0), budget.get("carbs", 0), "g", "🟨") + "\n" +
+                render_impact_line("Fat", dv.get("fat", 0), budget.get("fat", 0), "g", "🟩")
+            )
+            embed.add_field(name="📈 Daily Impact & Remaining Budget", value=impact_text, inline=False)
+
         if breakdown_rows:
             detail_lines = []
             for row in breakdown_rows[:6]:
@@ -1763,32 +1523,9 @@ class HealthButlerDiscordBot(Client):
         workout_line = f"• {workout_sentence}"
         return "\n".join([tip_line, status_line, workout_line])
 
-    def _build_fitness_embed(self, data: Dict[str, Any]) -> Embed:
-        """Build fitness-specific embed for structured FitnessAgent output."""
-        embed = Embed(title="🏃 Fitness Coach Plan", color=discord.Color.blurple())
-        summary = data.get("summary", "Here is your fitness recommendation.")
-        embed.description = summary
-
-        recs = data.get("recommendations", []) or []
-        if recs:
-            rec_lines = []
-            for rec in recs[:4]:
-                rec_lines.append(
-                    f"• **{rec.get('name', 'Exercise')}** — {rec.get('duration_min', 20)} min, ~{rec.get('kcal_estimate', 80)} kcal\n"
-                    f"  {rec.get('reason', 'Suitable for your current status')}"
-                )
-            embed.add_field(name="🎯 Recommendations", value="\n".join(rec_lines), inline=False)
-
-        warnings = data.get("safety_warnings", []) or []
-        if warnings:
-            embed.add_field(name="🛡️ Safety", value="\n".join([f"• {w}" for w in warnings[:4]]), inline=False)
-
-        avoid = data.get("avoid", []) or []
-        if avoid:
-            embed.add_field(name="🚫 Avoid", value="\n".join([f"• {a}" for a in avoid[:4]]), inline=False)
-
-        embed.set_footer(text="Use 'Log Workout' to track completion")
-        return embed
+    def _build_fitness_embed(self, data: Dict[str, Any], user_name: str = "User") -> Embed:
+        """Build fitness-specific embed for structured FitnessAgent output using HealthButlerEmbed factory."""
+        return HealthButlerEmbed.build_fitness_card(data, user_name=user_name)
 
     async def _persist_fitness_plan(self, data: Dict[str, Any], user_id: str) -> None:
         """Persist recommended workouts so plans are tracked in Supabase."""
@@ -1996,9 +1733,36 @@ class HealthButlerDiscordBot(Client):
         if user_id in _demo_user_profile:
             del _demo_user_profile[user_id]
             logger.info(f"🗑️ Cleared demo profile for user {user_id}")
+    async def _handle_settings_command(self, message: discord.Message):
+        """Manages personalized engagement settings (Phase 4)."""
+        author_id = str(message.author.id)
+        content = message.content.replace("!settings", "").strip().lower()
+        
+        # Fetch profile
+        profile = _user_profiles_cache.get(author_id) or get_user_profile(author_id) or {}
+        prefs = profile.get("preferences_json", {})
+        
+        if not content:
+            status_ico = "✅ Enabled" if prefs.get("morning_checkin_enabled", True) else "❌ Disabled"
+            await message.reply(
+                f"⚙️ **Your Health Assistant Settings**\n"
+                f"• Morning Check-in: **{status_ico}**\n\n"
+                f"To toggle, use `!settings morning on` or `!settings morning off`."
+            )
+            return
 
-        await message.channel.send("🛑 **Exited Demo Mode**")
-        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=DISCORD_ACTIVITY))
+        if "morning" in content:
+            new_val = "off" not in content
+            prefs["morning_checkin_enabled"] = new_val
+            if profile_db:
+                profile_db.update_profile(author_id, preferences_json=prefs)
+            
+            # Update cache
+            if author_id in _user_profiles_cache:
+                _user_profiles_cache[author_id]["preferences_json"] = prefs
+            
+            status_text = "enabled" if new_val else "disabled"
+            await message.reply(f"✅ Morning Check-in successfully **{status_text}**.")
 
 def main():
     bot = HealthButlerDiscordBot()

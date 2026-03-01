@@ -1,4 +1,4 @@
-"""Vision Tool for food detection using YOLOv8.
+"""Vision Tool for food detection using YOLO11.
 
 Finds food items in images and returns bounding boxes for Phase 2 semantic analysis.
 Uses a Singleton pattern to ensure the YOLO model is loaded only once.
@@ -16,7 +16,7 @@ class VisionTool:
     """
     Vision tool for food detection.
     
-    Pivot (Milestone 2): Uses YOLOv8 for object detection.
+    Pivot (Milestone 2): Uses YOLO11 for object detection.
     This tool is responsible for "where" the food is.
     """
     _instance = None
@@ -27,7 +27,7 @@ class VisionTool:
             cls._instance = super(VisionTool, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, model_name: str = "yolov8n.pt") -> None:
+    def __init__(self, model_name: str = "yolo11n.pt") -> None:
         # Avoid re-initialization if already initialized
         if hasattr(self, 'initialized'):
             return
@@ -37,15 +37,15 @@ class VisionTool:
         logger.info("VisionTool initialized (Lazy Loading enabled)")
     
     def _load_model(self) -> None:
-        """Lazy load the YOLOv8 model on first use."""
+        """Lazy load the YOLO11 model on first use."""
         if VisionTool._model is not None:
             return
 
         try:
             from ultralytics import YOLO
-            logger.info("🚀 Loading YOLOv8 model: %s...", self.model_name)
+            logger.info("🚀 Loading YOLO11 model: %s...", self.model_name)
             VisionTool._model = YOLO(self.model_name)
-            logger.info("✅ YOLOv8 model loaded successfully.")
+            logger.info("✅ YOLO11 model loaded successfully.")
         except Exception as e:
             logger.error("❌ Failed to load YOLOv8 model: %s. Vision features will be limited.", e)
             VisionTool._model = None
@@ -96,6 +96,13 @@ class VisionTool:
         except Exception as e:
             logger.error("❌ Error during food detection: %s", e)
             return [{"error": str(e)}]
+
+    async def detect_food_async(self, image_path: str) -> List[Dict[str, Any]]:
+        """
+        Detect food items asynchronously using a thread pool.
+        """
+        import asyncio
+        return await asyncio.to_thread(self.detect_food, image_path)
 
 # Standalone execution for testing
 if __name__ == "__main__":

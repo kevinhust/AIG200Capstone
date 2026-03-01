@@ -145,14 +145,67 @@ class BaseAgent:
         Returns:
             The agent's response as a string.
         """
-        # Handle pytest mode
+    async def _call_openai_api_async(self, prompt: str) -> str:
+        """Asynchronous call to OpenAI-compatible API."""
+        import aiohttp
+        base_url = self.api_config.get('base_url') or getattr(settings, 'OPENAI_BASE_URL', '').rstrip("/")
+        api_key = self.api_config.get('api_key') or getattr(settings, 'OPENAI_API_KEY', '')
+        model = self.api_config.get('model') or getattr(settings, 'OPENAI_MODEL', 'grok-2-latest')
+        
+        if not base_url:
+            return f"[{self.role}] Error: API Base URL not configured"
+        
+        url = f"{base_url}/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+        
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+        
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.7,
+            "max_tokens": 4096
+        }
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload, headers=headers, timeout=120) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    return content if content else str(data)
+        except Exception as e:
+            return f"[{self.role}] Error calling API ({model}): {e}"
+
+    async def _call_gemini_api_async(self, prompt: str) -> str:
+        """Asynchronous call to Google Gemini API."""
+        if not self.client:
+            return f"[{self.role}] Error: Gemini client not initialized"
+        
+        try:
+            # The genai SDK's generate_content is synchronous, or uses a thread in async mode.
+            # For this project, we wrap it in a thread or use a dedicated async client if available.
+            # Assuming genai 1.0+ has async support:
+            response = await self.client.models.generate_content(
+                model=settings.GEMINI_MODEL_NAME,
+                contents=prompt
+            )
+            return getattr(response, "text", str(response)).strip()
+        except Exception as e:
+            return f"[{self.role}] Error executing task: {str(e)}"
+
+    async def execute_async(self, task: str, context: Optional[List[Dict[str, str]]] = None) -> str:
+        """Asynchronously execute a task."""
         if "PYTEST_CURRENT_TEST" in os.environ:
             return f"[{self.role}] Task completed"
         
-        # Build the task prompt
         prompt_parts = [f"Task: {task}"]
-        
-        # Add context if provided
         if context:
             context_str = "\n\nContext from other agents:\n"
             for msg in context:
@@ -161,21 +214,13 @@ class BaseAgent:
         
         full_prompt = "".join(prompt_parts)
         
-        # Call the appropriate API
         if self.use_openai_api:
-            result = self._call_openai_api(full_prompt)
+            result = await self._call_openai_api_async(full_prompt)
         else:
-            result = self._call_gemini_api(self.system_prompt + "\n\n" + full_prompt)
+            result = await self._call_gemini_api_async(self.system_prompt + "\n\n" + full_prompt)
         
-        # Store in conversation history
-        self.conversation_history.append({
-            "role": "user",
-            "content": task
-        })
-        self.conversation_history.append({
-            "role": "assistant",
-            "content": result
-        })
+        self.conversation_history.append({"role": "user", "content": task})
+        self.conversation_history.append({"role": "assistant", "content": result})
         
         return result
     

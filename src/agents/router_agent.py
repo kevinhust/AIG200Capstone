@@ -23,21 +23,23 @@ class RouterAgent(BaseAgent):
 
 Your responsibilities:
 1. Analyze user tasks and determine which specialist agents to involve
-2. Break down complex tasks into subtasks for different specialists
+2. Break down complex tasks into subtasks (e.g. fitness analysis + nutrition recovery)
 3. Coordinate the workflow between agents
 4. Synthesize final results from multiple specialists
 
 Available specialist agents:
-- coder: Writes and refactors code, creates files, implements features
-- reviewer: Reviews code quality, checks for security issues, analyzes logs
-- researcher: Gathers information, performs web searches, analyzes data
+- fitness: Provides workout routines, exercise demonstrations, and injury-safe training advice.
+- nutrition: Analyzes meals, calculates macros, provides dietary suggestions, and post-workout recovery plans.
+- coder: (Legacy/Fallback) Writes code or implements features.
 
 When analyzing a task, respond with a delegation plan in this format:
 DELEGATION:
 - agent: <agent_name>
 - task: <specific task for that agent>
 
-You may delegate to multiple agents in sequence or parallel."""
+If a task involves both exercise and diet, delegate to both.
+Example: "I want to train legs and then eat well" -> Delegate to fitness then nutrition.
+"""
         # Allow role and system_prompt override via kwargs
         # (e.g., CoordinatorAgent passes role="coordinator" with custom system_prompt)
         role = kwargs.pop('role', 'router')

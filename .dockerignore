@@ -41,7 +41,7 @@ archive/
 
 # Large data files (models should be downloaded at runtime)
 # Only exclude top-level data/, not health_butler/data/ or health_butler/data_rag/
-/data/
+# /data/
 *.db
 *.sqlite
 

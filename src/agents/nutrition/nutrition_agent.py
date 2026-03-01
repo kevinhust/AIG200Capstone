@@ -50,6 +50,18 @@ You MUST return a valid JSON object:
   "confidence_score": 0.0,
   "composition_analysis": "Detailed breakdown of ingredients and portions.",
   "health_tip": "A brief actionable tip.",
+    "daily_value_percentage": {
+        "calories": 0.0,
+        "protein": 0.0,
+        "carbs": 0.0,
+        "fat": 0.0
+    },
+    "remaining_budget": {
+        "calories": 0.0,
+        "protein": 0.0,
+        "carbs": 0.0,
+        "fat": 0.0
+    },
     "items_detected": [],
     "calorie_breakdown": [
         {
@@ -77,7 +89,7 @@ CRITICAL RULES:
         # Safety net: BaseAgent may leave self.client=None when it fails to read
         # the API key (e.g. env var not yet loaded at import time).  Re-try here.
         if self.client is None and "PYTEST_CURRENT_TEST" not in os.environ:
-            api_key = os.getenv("GOOGLE_API_KEY") or settings.GOOGLE_API_KEY
+            api_key = settings.GOOGLE_API_KEY
             if api_key:
                 try:
                     self.client = genai.Client(api_key=api_key)
@@ -147,6 +159,51 @@ CRITICAL RULES:
             return text[:-1]
 
         return text
+
+    def _calculate_tdee(self, profile: Dict[str, Any]) -> Dict[str, float]:
+        """Calculate TDEE and Macro targets based on Mifflin-St Jeor Equation."""
+        try:
+            weight = float(profile.get('weight', profile.get('weight_kg', 70)))
+            height = float(profile.get('height', profile.get('height_cm', 170)))
+            age = int(profile.get('age', 30))
+            gender = str(profile.get('gender', 'Male')).lower()
+            
+            # BMR
+            bmr = (10 * weight) + (6.25 * height) - (5 * age)
+            if 'female' in gender:
+                bmr -= 161
+            else:
+                bmr += 5
+            
+            # Activity Factor
+            activity_map = {
+                "sedentary": 1.2,
+                "lightly active": 1.375,
+                "moderately active": 1.55,
+                "very active": 1.725,
+                "extra active": 1.9
+            }
+            factor = activity_map.get(str(profile.get('activity', '')).lower(), 1.2)
+            tdee = bmr * factor
+            
+            # Goal adjustment
+            goal = str(profile.get('goal', '')).lower()
+            if 'lose' in goal:
+                tdee -= 500
+            elif 'gain' in goal:
+                tdee += 300
+            
+            # Macro distribution (Protein: 30%, Carbs: 40%, Fat: 30% of calories)
+            # Protein: 4 kcal/g, Carbs: 4 kcal/g, Fat: 9 kcal/g
+            return {
+                "calories": round(tdee, 0),
+                "protein": round((tdee * 0.30) / 4, 1),
+                "carbs": round((tdee * 0.40) / 4, 1),
+                "fat": round((tdee * 0.30) / 9, 1)
+            }
+        except Exception as e:
+            logger.warning(f"TDEE calculation failed: {e}")
+            return {"calories": 2000, "protein": 150, "carbs": 200, "fat": 65}
 
     def _build_calorie_breakdown(
         self,
@@ -336,6 +393,282 @@ CRITICAL RULES:
             "items_detected": [item.get("name", "Unknown") if isinstance(item, dict) else str(item) for item in items[:6]],
             "calorie_breakdown": self._build_calorie_breakdown(items, rag_matches),
         }
+
+    async def execute_async(
+        self, 
+        task: str, 
+        context: Optional[List[Dict[str, Any]]] = None,
+        progress_callback: Optional[Any] = None
+    ) -> str:
+        """
+        [Latency Optimization Phase 1]
+        Asynchronous execution with parallel processing (YOLO + Gemini + RAG).
+        
+        @param progress_callback: Optional async function to call with intermediate status updates.
+        """
+        import asyncio
+        logger.info("[NutritionAgent] Executing ASYNC nutrition synthesis...")
+
+        image_path = None
+        user_context_str = "{}"
+        if context:
+            for msg in context:
+                if msg.get("type") == "image_path":
+                    image_path = msg.get("content")
+                elif msg.get("type") == "user_context":
+                    user_context_str = msg.get("content", "{}")
+
+        if not image_path:
+            # Fallback to sync execute if no image
+            return await asyncio.to_thread(self.execute, task, context)
+
+        # 1. Parallel Task Initiation (YOLO + Gemini 1st Pass)
+        # We start Gemini immediately without waiting for YOLO hints to save time.
+        # Gemini 2.5 Flash is smart enough to see things without hints most of the time.
+        
+        async def run_yolo():
+            try:
+                # YOLO hints are CPU bound, run in thread or async wrapper
+                hints = await self.vision_tool.detect_food_async(image_path)
+                # Re-run the reconciliation logic (moved to helper for reuse)
+                yolo_hints = self._process_yolo_raw(hints, image_path)
+                if progress_callback:
+                    labels = [h["label"] for h in yolo_hints]
+                    hint_str = f"🔍 Objects detected: {', '.join(labels)}" if labels else "🔍 Analyzing image..."
+                    await progress_callback("analyzing", hint_str)
+                return yolo_hints
+            except Exception as e:
+                logger.error(f"[NutritionAgent] YOLO Error: {e}")
+                return []
+
+        async def run_gemini():
+            try:
+                # Direct Gemini analysis (no hints yet)
+                return await self.gemini_engine.analyze_food_async(image_path, user_context_str)
+            except Exception as e:
+                logger.error(f"[NutritionAgent] Gemini Error: {e}")
+                return {"error": str(e)}
+
+        # Start concurrent tasks
+        yolo_task = asyncio.create_task(run_yolo())
+        gemini_task = asyncio.create_task(run_gemini())
+
+        yolo_hints, vision_info = await asyncio.gather(yolo_task, gemini_task)
+
+        # 2. Reconcile & Parallel RAG
+        # If Gemini failed or was generic, use YOLO hints for reconstruction
+        vision_info = self._reconcile_vision_v41(vision_info, yolo_hints)
+
+        items = vision_info.get("items", [])
+        if not items and vision_info.get("dish_name"):
+            items = [{"name": vision_info["dish_name"], "portion": "1 serving"}]
+
+        rag_matches = []
+        if items:
+            # Parallel RAG lookups
+            async def rag_lookup(item):
+                raw_name = item.get("name", "")
+                query_name = self._normalize_food_query(raw_name)
+                match = await asyncio.to_thread(self.rag.search_food, query_name)
+                if match:
+                    match["original_item"] = raw_name
+                    match["estimated_portion"] = item.get("portion", "unknown")
+                    return match
+                return None
+
+            rag_results = await asyncio.gather(*(rag_lookup(i) for i in items))
+            rag_matches = [m for m in rag_results if m]
+
+        # 3. Final Synthesis (Parallel with RAG if needed, but here it depends on RAG results)
+        synthesis_input = f"""
+TASK: {task}
+VISION_RESULT: {json.dumps(vision_info)}
+RAG_MATCHES (Ground Truth Data): {json.dumps(rag_matches)}
+
+Synthesize final analysis. Ground estimates in RAG_MATCHES.
+Copy 'visual_warnings' and 'health_score' from VISION_RESULT.
+"""
+        
+        data = await self._synthesize_final_async(synthesis_input)
+        
+        if not data:
+            data = self._build_fallback_payload(vision_info, rag_matches, items)
+        
+        # 4. Calculate Daily Impact (DV% and Remaining Budget)
+        try:
+            profile = json.loads(user_context_str) if isinstance(user_context_str, str) else user_context_str
+            targets = self._calculate_tdee(profile)
+            
+            # Sum current intake (excluding the current meal being analyzed if it's already in the list)
+            # In bot.py, context['daily_intake'] is usually passed.
+            past_meals = profile.get("daily_intake", [])
+            past_calories = sum(float((m.get("macros", {}).get("calories", 0))) for m in past_meals)
+            past_protein = sum(float((m.get("macros", {}).get("protein", 0))) for m in past_meals)
+            past_carbs = sum(float((m.get("macros", {}).get("carbs", 0))) for m in past_meals)
+            past_fat = sum(float((m.get("macros", {}).get("fat", 0))) for m in past_meals)
+            
+            curr_macros = data.get("total_macros", {})
+            curr_cal = float(curr_macros.get("calories", 0))
+            curr_pro = float(curr_macros.get("protein", 0))
+            curr_carb = float(curr_macros.get("carbs", 0))
+            curr_fat = float(curr_macros.get("fat", 0))
+            
+            total_after_meal = {
+                "calories": past_calories + curr_cal,
+                "protein": past_protein + curr_pro,
+                "carbs": past_carbs + curr_carb,
+                "fat": past_fat + curr_fat
+            }
+            
+            data["daily_value_percentage"] = {
+                k: round((total_after_meal[k] / targets[k]) * 100, 1) if targets.get(k, 0) > 0 else 0
+                for k in ["calories", "protein", "carbs", "fat"]
+            }
+            
+            data["remaining_budget"] = {
+                k: round(max(0, targets[k] - total_after_meal[k]), 1)
+                for k in ["calories", "protein", "carbs", "fat"]
+            }
+            
+        except Exception as e:
+            logger.warning(f"Daily impact calculation failed: {e}")
+
+        return json.dumps(data)
+
+    def _process_yolo_raw(self, detections: List[Dict], image_path: str) -> List[Dict]:
+        """Extracted logic for YOLO reconciliation from the original execute()."""
+        # Phase 11 & Latency Optimization: Full heuristic restoration
+        allow_labels = {"banana", "apple", "orange", "broccoli", "carrot", "pizza", "donut", "cake", "sandwich", "hot dog"}
+        try:
+            from PIL import Image, ImageStat
+            import colorsys
+            img = Image.open(image_path).convert("RGB")
+            h_img, w_img = img.height, img.width
+
+            def clamp_bbox(bbox):
+                x1, y1, x2, y2 = bbox
+                x1 = max(0.0, min(x1, w_img - 1))
+                y1 = max(0.0, min(y1, h_img - 1))
+                x2 = max(0.0, min(x2, w_img))
+                y2 = max(0.0, min(y2, h_img))
+                return [x1, y1, x2, y2]
+
+            def mean_rgb(box):
+                region = img.crop(map(int, box))
+                stat = ImageStat.Stat(region)
+                return [float(stat.mean[0]), float(stat.mean[1]), float(stat.mean[2])]
+
+            def rgb_dist(a, b): return ((a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2)**0.5
+
+            def bbox_iou(a, b):
+                ax1, ay1, ax2, ay2 = a
+                bx1, by1, bx2, by2 = b
+                inter_w = max(0.0, min(ax2, bx2) - max(ax1, bx1))
+                inter_h = max(0.0, min(ay2, by2) - max(ay1, by1))
+                inter = inter_w * inter_h
+                if inter <= 0: return 0.0
+                area_a = (ax2 - ax1) * (ay2 - ay1)
+                area_b = (bx2 - bx1) * (by2 - by1)
+                union = area_a + area_b - inter
+                return float(inter / union) if union > 0 else 0.0
+
+            def citrus_like(bbox):
+                x1, y1, x2, y2 = bbox
+                w, h = max(1.0, x2 - x1), max(1.0, y2 - y1)
+                inner = [x1 + 0.2*w, y1 + 0.2*h, x1 + 0.8*w, y1 + 0.8*h]
+                r, g, b = mean_rgb(inner)
+                hh, ss, vv = colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
+                return (ss >= 0.25) and (vv >= 0.25) and (0.03 <= hh <= 0.17)
+
+            processed = []
+            for det in detections:
+                label = str(det.get("label", "")).lower().strip()
+                if label not in allow_labels: continue
+                bbox = clamp_bbox(det["bbox"])
+                conf = det["confidence"]
+                
+                if label == "donut" and not (rgb_dist(mean_rgb(bbox), [255,255,255]) < 10): # dummy check
+                    if citrus_like(bbox): label = "orange"
+                
+                processed.append({"label": label, "confidence": conf, "bbox": bbox})
+            
+            # NMS per label
+            kept = []
+            for label in sorted({d["label"] for d in processed}):
+                dets = sorted([d for d in processed if d["label"] == label], key=lambda x: x["confidence"], reverse=True)
+                label_kept = []
+                for d in dets:
+                    if all(bbox_iou(d["bbox"], k["bbox"]) < 0.5 for k in label_kept):
+                        label_kept.append(d)
+                kept.extend(label_kept)
+
+            counts = {}
+            for det in kept:
+                lbl = det["label"]
+                if lbl not in counts: counts[lbl] = {"count": 0, "max_confidence": 0.0}
+                counts[lbl]["count"] += 1
+                counts[lbl]["max_confidence"] = max(counts[lbl]["max_confidence"], det["confidence"])
+            
+            return [{"label": l, "count": i["count"], "max_confidence": round(float(i["max_confidence"]), 3)} for l, i in counts.items()]
+        except Exception as e:
+            logger.warning(f"[NutritionAgent] YOLO post-proc failed: {e}")
+            return []
+
+    def _reconcile_vision_v41(self, vision_info: Dict, yolo_hints: List) -> Dict:
+        """v4.1 Reconciler: Merges YOLO hints into Gemini's result."""
+        # Adapted from original execute() reconciliation logic
+        if not yolo_hints: return vision_info
+        
+        items = vision_info.get("items", [])
+        if not items and yolo_hints:
+            # Gemini missed objects entirely or was generic
+            items = []
+            for h in yolo_hints:
+                items.append({
+                    "name": h["label"].title(),
+                    "portion": f"x{h['count']}" if h['count'] > 1 else "1 item",
+                    "estimated_weight_grams": 100, # Fallback
+                    "macros": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}
+                })
+            vision_info["items"] = items
+            if not vision_info.get("dish_name"):
+                vision_info["dish_name"] = items[0]["name"]
+        return vision_info
+
+    async def _synthesize_final_async(self, prompt: str) -> Optional[Dict]:
+        """Helper to run the final structured synthesis asynchronously."""
+        from google.genai.types import GenerateContentConfig
+        try:
+            response = await self.client.aio.models.generate_content(
+                model=settings.GEMINI_MODEL_NAME,
+                contents=self.system_prompt + "\n\n" + prompt,
+                config=GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema={
+                        "type": "OBJECT",
+                        "properties": {
+                            "dish_name": {"type": "STRING"},
+                            "total_macros": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "calories": {"type": "NUMBER"},
+                                    "protein": {"type": "NUMBER"},
+                                    "carbs": {"type": "NUMBER"},
+                                    "fat": {"type": "NUMBER"}
+                                },
+                                "required": ["calories", "protein", "carbs", "fat"]
+                            },
+                            "visual_warnings": {"type": "ARRAY", "items": {"type": "STRING"}},
+                            "health_score": {"type": "INTEGER"},
+                            "composition_analysis": {"type": "STRING"},
+                            "ingredients_with_portions": {"type": "ARRAY", "items": {"type": "STRING"}}
+                        }
+                    }
+                )
+            )
+            return response.parsed
+        except Exception:
+            return None
 
     def execute(self, task: str, context: Optional[List[Dict[str, Any]]] = None) -> str:
         """
@@ -704,13 +1037,14 @@ TASK: {task}
 VISION_RESULT: {json.dumps(vision_info)}
 RAG_MATCHES (Ground Truth Data): {json.dumps(rag_matches)}
 
-Synthesize the final nutritional analysis. 
-IMPORTANT: 
+Synthesize the final nutritional analysis.
+IMPORTANT:
 - If RAG_MATCHES or VISION_RESULT contains calorie/macro data, 'total_macros' MUST reflect this. NEVER return 0 if food is visible.
 - Use the RAG_MATCHES as the most reliable source for 'per 100g' data, scaling by the portion size estimated in VISION_RESULT.
 - Ensure the 'composition_analysis' explains exactly why these specific numbers were chosen.
 - For 'ingredients_with_portions', estimate weight/quantity (e.g., '135g x3', '270g total').
 - For 'detailed_nutrients', provide estimates for Sodium (mg), Fiber (g), Sugar (g), and Saturated Fat (g) based on common nutritional data.
+- CRITICAL: Copy 'visual_warnings' and 'health_score' from VISION_RESULT to your output. These are health risk indicators.
 """
         
         data = None
@@ -749,7 +1083,7 @@ IMPORTANT:
                                 "composition_analysis": {"type": "STRING"},
                                 "health_tip": {"type": "STRING"},
                                 "ingredients_with_portions": {
-                                    "type": "ARRAY", 
+                                    "type": "ARRAY",
                                     "items": {"type": "STRING"}
                                 },
                                 "items_detected": {"type": "ARRAY", "items": {"type": "STRING"}},
@@ -764,6 +1098,15 @@ IMPORTANT:
                                             "calories_total": {"type": "NUMBER"}
                                         }
                                     }
+                                },
+                                "visual_warnings": {
+                                    "type": "ARRAY",
+                                    "items": {"type": "STRING"},
+                                    "description": "Health risk labels from vision analysis"
+                                },
+                                "health_score": {
+                                    "type": "INTEGER",
+                                    "description": "Health score 1-10 (10=healthiest)"
                                 }
                             },
                             "required": ["dish_name", "total_macros", "composition_analysis", "ingredients_with_portions"]
@@ -789,6 +1132,12 @@ IMPORTANT:
                     val = data["total_macros"].get(target, 0)
                     try: data["total_macros"][target] = float(val) if val is not None else 0
                     except: data["total_macros"][target] = 0
+
+            # Module 3: Pass through visual_warnings and health_score from vision analysis
+            if "visual_warnings" not in data or not data["visual_warnings"]:
+                data["visual_warnings"] = vision_info.get("visual_warnings", [])
+            if "health_score" not in data or data.get("health_score") is None:
+                data["health_score"] = vision_info.get("health_score", 7)  # Default to neutral
 
             calorie_breakdown = self._build_calorie_breakdown(items, rag_matches)
             if calorie_breakdown:

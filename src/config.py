@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import List, Optional
-from pydantic import Field
+from pydantic import Field, AliasChoices
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,7 +31,11 @@ class Settings(BaseSettings):
     """Application settings managed by Pydantic."""
 
     # Google GenAI Configuration
-    GOOGLE_API_KEY: str = ""
+    GOOGLE_API_KEY: str = Field(
+        default="",
+        validation_alias=AliasChoices("GOOGLE_API_KEY", "GEMINI_API_KEY"),
+        description="Google API Key for Gemini. Supports both GOOGLE_API_KEY and GEMINI_API_KEY env vars."
+    )
     # Default to Flash to avoid free-tier Pro quota errors; override via env if needed.
     GEMINI_MODEL_NAME: str = "gemini-2.5-flash"
 
@@ -76,6 +80,9 @@ class Settings(BaseSettings):
     MCP_TOOL_PREFIX: str = Field(
         default="mcp_", description="Prefix for MCP tool names to avoid conflicts"
     )
+
+    # Wger API Configuration
+    WGER_API_BASE_URL: str = "https://wger.de/api/v2/"
 
     model_config = SettingsConfigDict(
         env_file=str(Path(__file__).resolve().parent.parent / ".env"),
