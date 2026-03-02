@@ -335,13 +335,13 @@ class HealthButlerDiscordBot(Client):
                 return
 
             await message.channel.send("🔍 Analyzing your health trends... this may take a moment.")
-            
-            if profile_db:
+
+            if pu.profile_db:
                 # 1. Fetch monthly stats from optimized view (v6.0)
-                historical_data = profile_db.get_monthly_trends_raw(author_id)
+                historical_data = pu.profile_db.get_monthly_trends_raw(author_id)
                 # Fallback if view is empty but daily_logs might have data
                 if not historical_data:
-                    historical_data = profile_db.get_historical_trends(author_id, days=30)
+                    historical_data = pu.profile_db.get_historical_trends(author_id, days=30)
                 
                 # 2. Process with AnalyticsAgent
                 analysis = await self.analytics_agent.analyze_trends(historical_data, profile)
@@ -363,7 +363,7 @@ class HealthButlerDiscordBot(Client):
                 await message.channel.send("⚠️ You need to complete your profile first! Use `/setup` or type anything health-related.")
                 return
                 
-            stats = profile_db.get_today_stats(author_id) if profile_db else {"total_calories": 0}
+            stats = pu.profile_db.get_today_stats(author_id) if pu.profile_db else {"total_calories": 0}
             target = pu.calculate_daily_target(profile)
             remaining = {"calories": max(0, target - stats["total_calories"])}
             
