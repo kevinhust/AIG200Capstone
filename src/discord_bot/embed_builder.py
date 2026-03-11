@@ -1,6 +1,6 @@
 import discord
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 class HealthButlerEmbed:
     """
@@ -16,6 +16,40 @@ class HealthButlerEmbed:
     }
 
     @staticmethod
+    def render_budget_progress_bar(percentage: float, remaining_pct: Optional[float] = None) -> str:
+        """
+        Generate a Discord-friendly progress bar string.
+
+        Args:
+            percentage: Consumption percentage (0-100+)
+            remaining_pct: Remaining budget percentage (used for color coding)
+
+        Returns:
+            Progress bar string like "🟢 [▰▰▰▰▰▱▱▱▱▱] 50%"
+        """
+        filled_length = min(10, max(0, int(10 * (percentage / 100))))
+        bar = "▰" * filled_length + "▱" * (10 - filled_length)
+
+        # Color based on remaining budget (not consumed)
+        if remaining_pct is not None:
+            if remaining_pct < 20:
+                color = "🔴"
+            elif remaining_pct < 40:
+                color = "🟡"
+            else:
+                color = "🟢"
+        else:
+            # Fallback: color based on consumption
+            if percentage >= 100:
+                color = "🔴"
+            elif percentage >= 85:
+                color = "🟡"
+            else:
+                color = "🟢"
+
+        return f"{color} `[{bar}] {percentage:.0f}%`"
+
+    @staticmethod
     def create_base_embed(title: str, description: str, color: discord.Color = discord.Color.blue()) -> discord.Embed:
         """Creates a consistent base embed with timestamp."""
         return discord.Embed(
@@ -26,9 +60,22 @@ class HealthButlerEmbed:
         )
 
     @staticmethod
-    def build_fitness_card(data: Dict[str, Any], user_name: str = "User") -> discord.Embed:
+    def build_fitness_card(
+        data: Dict[str, Any],
+        user_name: str = "User",
+        budget_progress: Optional[Dict[str, Any]] = None,
+        empathy_strategy: Optional[Dict[str, Any]] = None,
+        user_habits: Optional[Dict[str, Any]] = None
+    ) -> discord.Embed:
         """
         Builds a rich fitness recommendation card with exercise images.
+
+        Args:
+            data: Fitness agent response with recommendations, safety_warnings, etc.
+            user_name: User's display name
+            budget_progress: Optional budget progress dict from FitnessAgent._generate_budget_progress()
+            empathy_strategy: Optional empathy strategy from FitnessAgent._build_empathy_strategy() (v6.3)
+            user_habits: Optional user habits from FitnessAgent._get_user_habits() (v6.3)
         """
         embed = discord.Embed(
             title=f"🏃 Fitness Plan: {user_name}",
@@ -36,6 +83,42 @@ class HealthButlerEmbed:
             color=HealthButlerEmbed.COLOR_MAP["fitness"],
             timestamp=datetime.utcnow()
         )
+
+        # v6.3: Butler's Insight (Empathy Strategy) - Highest Priority
+        if empathy_strategy and empathy_strategy.get("empathy_message"):
+            insight_msg = empathy_strategy["empathy_message"]
+            suggested_pivot = empathy_strategy.get("suggested_pivot", "")
+            conflict_type = empathy_strategy.get("conflict_type", "")
+
+            # Build insight display with blockquote styling
+            insight_value = f"> *{insight_msg}*"
+            if suggested_pivot:
+                insight_value += f"\n\n💡 **Try instead**: {suggested_pivot}"
+
+            embed.add_field(
+                name="💡 Butler's Insight",
+                value=insight_value,
+                inline=False
+            )
+
+        # v6.2: Add Budget Progress Field (if provided)
+        if budget_progress:
+            remaining = budget_progress.get("remaining", 0)
+            remaining_pct = budget_progress.get("remaining_pct", 0)
+            status = budget_progress.get("status", "good")
+            status_emoji = budget_progress.get("status_emoji", "🟢")
+            calorie_bar = budget_progress.get("calorie_bar", "")
+
+            # Build budget display
+            budget_value = f"""**Remaining**: {remaining:.0f} kcal ({remaining_pct:.1f}%)
+{calorie_bar}
+**Status**: {status_emoji} {status.upper()}"""
+
+            embed.add_field(
+                name="📊 Today's Energy Budget (v6.2)",
+                value=budget_value,
+                inline=False
+            )
 
         # Handle both "recommendations" (specialist agent) and "exercises" (legacy/RAG direct)
         recs = data.get("recommendations") or data.get("exercises") or []
@@ -76,7 +159,12 @@ class HealthButlerEmbed:
         if main_image:
             embed.set_image(url=main_image)
         
-        embed.set_footer(text="Powered by Health Butler RAG • Premium Media Integration")
+        # v6.3: Footer with Preference Tags
+        footer_text = "Powered by Health Butler RAG • Premium Media Integration"
+        if user_habits and user_habits.get("top_activities"):
+            top_tags = " • ".join(user_habits["top_activities"][:2])
+            footer_text = f"Personalized for your love of: {top_tags} | v6.3 Preference Engine"
+        embed.set_footer(text=footer_text)
         return embed
 
     @staticmethod
@@ -176,7 +264,7 @@ class HealthButlerEmbed:
             color=HealthButlerEmbed.COLOR_MAP["info"],
             timestamp=datetime.utcnow()
         )
-        
+
         embed.add_field(
             name="🚀 专属健康盾初始化",
             value=(
@@ -186,9 +274,61 @@ class HealthButlerEmbed:
             ),
             inline=False
         )
-        
+
         embed.set_image(url="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&q=80&w=1000") # Sample luxury fitness backdrop
         embed.set_footer(text="Powered by Antigravity Health Swarm v6.1 • Premium Onboarding")
+        return embed
+
+    @staticmethod
+    def build_new_user_guide_embed(user_name: str) -> discord.Embed:
+        """
+        Builds the initial guide embed shown when a new user says "hi" in #general.
+        Includes disclaimer and instructions about the onboarding flow.
+        """
+        embed = discord.Embed(
+            title="👋 Welcome to Health Butler!",
+            description=(
+                f"Hi **{user_name}**! I'm your personal health assistant.\n\n"
+                "I can help you track meals, plan workouts, and achieve your health goals "
+                "using AI-powered analysis and personalized recommendations."
+            ),
+            color=HealthButlerEmbed.COLOR_MAP["info"],
+            timestamp=datetime.utcnow()
+        )
+
+        embed.add_field(
+            name="📋 Quick Setup (3 steps)",
+            value=(
+                "1️⃣ **Basic Info**: Age, height, weight\n"
+                "2️⃣ **Goals**: Your fitness objectives\n"
+                "3️⃣ **Safety**: Allergies & health conditions\n\n"
+                "⏱️ Takes about 2 minutes on mobile"
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="🔒 Privacy First",
+            value=(
+                "• Setup happens here in **#general** (public)\n"
+                "• After setup, I'll create a **private channel** just for you\n"
+                "• Your daily health logs stay private"
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="⚠️ Disclaimer",
+            value=(
+                "Health Butler provides **general health information** only.\n"
+                "• Not a substitute for professional medical advice\n"
+                "• Always consult healthcare professionals for serious conditions\n"
+                "• Your data is stored securely and never shared"
+            ),
+            inline=False
+        )
+
+        embed.set_footer(text="By clicking 'Accept & Start', you agree to our Terms of Service")
         return embed
 
     @staticmethod

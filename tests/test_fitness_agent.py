@@ -10,8 +10,8 @@ def fitness_agent():
 def test_fitness_agent_initialization(fitness_agent):
     """Test that the agent initializes with the correct role and profile."""
     assert fitness_agent.role == "fitness"
-    assert "Kevin" in fitness_agent.system_prompt
-    assert "Knee pain" in fitness_agent.system_prompt
+    assert "Fitness Coach" in fitness_agent.system_prompt
+    assert "SAFETY POLICY" in fitness_agent.system_prompt
 
 @patch("src.agents.base_agent.BaseAgent.execute")
 def test_fitness_advice_high_calorie(mock_base_execute, fitness_agent):

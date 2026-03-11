@@ -308,6 +308,95 @@ class ProfileDB:
     # ============================================
     # Workout Tracking Operations
     # ============================================
+    # Workout Logs (v6.3 Preference Learning)
+    # ============================================
+
+    def get_workout_logs(
+        self,
+        discord_user_id: str,
+        days: int = 14,
+        status: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch raw workout logs for preference learning analysis.
+
+        Args:
+            discord_user_id: Discord user ID
+            days: Number of days to look back (default: 14)
+            status: Optional filter by status ("recommended", "completed", etc.)
+
+        Returns:
+            List of workout log entries with exercise_name, status, duration_min,
+            kcal_estimate, created_at
+        """
+        start_ts = datetime.now().timestamp() - (days * 24 * 60 * 60)
+        start_date = datetime.fromtimestamp(start_ts).isoformat()
+
+        try:
+            query = self.client.table("workout_logs")\
+                .select("exercise_name, status, duration_min, kcal_estimate, created_at, metadata")\
+                .eq("user_id", discord_user_id)\
+                .gte("created_at", start_date)\
+                .order("created_at", desc=True)
+
+            if status:
+                query = query.eq("status", status)
+
+            response = query.execute()
+            return response.data or []
+
+        except Exception as e:
+            logger.warning(f"[ProfileDB] Failed to fetch workout logs: {e}")
+            # Fallback: try chat_messages
+            return self._get_workout_logs_from_chat(discord_user_id, days, status)
+
+    def _get_workout_logs_from_chat(
+        self,
+        discord_user_id: str,
+        days: int = 14,
+        status: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Fallback: Extract workout logs from chat_messages table."""
+        start_ts = datetime.now().timestamp() - (days * 24 * 60 * 60)
+        logs = []
+
+        try:
+            history = self.get_chat_history(discord_user_id, limit=500)
+            for msg in history:
+                if msg.get("role") != "workout_log":
+                    continue
+
+                created_at = msg.get("created_at")
+                if created_at:
+                    try:
+                        ts = datetime.fromisoformat(created_at.replace("Z", "+00:00")).timestamp()
+                        if ts < start_ts:
+                            continue
+                    except Exception:
+                        pass
+
+                try:
+                    payload = json.loads(msg.get("content", "{}"))
+                except Exception:
+                    continue
+
+                if status and payload.get("status") != status:
+                    continue
+
+                logs.append({
+                    "exercise_name": payload.get("exercise_name"),
+                    "status": payload.get("status"),
+                    "duration_min": payload.get("duration_min"),
+                    "kcal_estimate": payload.get("kcal_estimate"),
+                    "created_at": created_at,
+                    "metadata": payload.get("metadata", {})
+                })
+
+            return logs
+
+        except Exception as e:
+            logger.warning(f"[ProfileDB] Fallback workout logs failed: {e}")
+            return []
 
     def log_workout_event(
         self,

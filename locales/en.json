@@ -1,0 +1,98 @@
+{
+  "onboarding": {
+    "welcome_title": "👋 Welcome to Health Butler!",
+    "welcome_description": "I'm your personal health assistant. I can help you track meals, plan workouts, and achieve your health goals using AI-powered analysis and personalized recommendations.",
+    "quick_setup_title": "📋 Quick Setup (3 steps)",
+    "quick_setup_steps": [
+      "1️⃣ **Basic Info**: Age, height, weight",
+      "2️⃣ **Goals**: Your fitness objectives",
+      "3️⃣ **Safety**: Allergies & health conditions"
+    ],
+    "step_1_description": "Please enter your basic biometrics for TDEE calculation.",
+    "step_2_description": "Select your biological sex, fitness goal, and activity level.",
+    "step_3_description": "Help us understand any allergies and health conditions to keep you safe.",
+    "privacy_title": "🔒 Privacy First",
+    "privacy_description": [
+      "• Setup happens here in **#general** (public channel)",
+      "• After setup, I'll create a **private channel** just for you!",
+      "• Your daily health logs stay private."
+    ],
+    "accept_button": "Accept & Start",
+    "view_terms_button": "View Full Terms",
+    "learn_more_button": "Learn More",
+    "disclaimer_title": "⚠️ Disclaimer",
+    "disclaimer_description": "Health Butler provides **general health information** only.\n• Not a substitute for professional medical advice\n• Always consult healthcare professionals for serious conditions\n• Your data is stored securely and never shared with third parties."
+  },
+  "workout_log": {
+    "log_title": "🏃 Log Workout",
+    "log_description": "Log your workout! Supports text or images.",
+    "examples": [
+      "I did 30 minutes of yoga",
+      "Went for a run"
+    ]
+  },
+  "nutrition_log": {
+    "log_title": "📸 Log Meal",
+    "log_description": "Send a photo of your food!",
+    "examples": [
+      "Sent a photo of my lunch",
+      "Just ate an apple"
+    ]
+  },
+  "check_progress": {
+    "trends_title": "📊 Check Progress",
+    "trends_description": "View your health analytics.",
+    "profile_title": "👤 Profile",
+    "profile_description": "View your personal stats.",
+    "settings_title": "⚙️ Settings",
+    "settings_description": "Manage your preferences.",
+    "help_title": "❓ Help",
+    "help_description": "Full command list.",
+    "error_generic": "⚠️ Error",
+    "error_not_found": "Not found",
+    "error_permission": "Permission denied",
+    "error_database": "Database error"
+  },
+  "buttons": {
+    "start_setup": "Start Setup",
+    "view_terms": "View Terms",
+    "learn_more": "Learn More"
+  },
+  "meal_types": {
+    "breakfast": "Breakfast",
+    "lunch": "Lunch",
+    "dinner": "Dinner",
+    "snack": "Snack"
+  },
+  "workout_types": {
+    "yoga": "Yoga",
+    "running": "Running",
+    "swimming": "Swimming",
+    "cycling": "Cycling",
+    "strength": "Strength Training",
+    "cardio": "Cardio"
+  },
+  "goals": {
+    "lose_weight": "Lose Weight",
+    "maintain": "Maintain Weight",
+    "build_muscle": "Build Muscle",
+    "improve_health": "Improve Health"
+  },
+  "activities": {
+    "sedentary": "Sedentary",
+    "lightly_active": "Lightly Active",
+    "moderately_active": "Moderately Active",
+    "very_active": "Very Active"
+  },
+  "time_units": {
+    "minutes": "minutes",
+    "hours": "Hours"
+  },
+  "nutrition": {
+    "calories": "Calories",
+    "protein": "Protein",
+    "carbs": "Carbs",
+    "fat": "Fat",
+    "fiber": "Fiber"
+  }
+}

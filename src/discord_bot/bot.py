@@ -18,7 +18,7 @@ from discord.ext import tasks
 from datetime import datetime, time
 from src.swarm import HealthSwarm
 from src.discord_bot.embed_builder import HealthButlerEmbed
-from src.discord_bot.views import RegistrationViewA, OnboardingGreetingView, MealLogView
+from src.discord_bot.views import RegistrationViewA, OnboardingGreetingView, NewUserGuideView
 from src.agents.engagement.engagement_agent import EngagementAgent
 from src.agents.analytics.analytics_agent import AnalyticsAgent
 from src.discord_bot.profile_db import get_profile_db
@@ -192,6 +192,7 @@ class HealthButlerDiscordBot(Client):
                     ),
                     color=discord.Color.green()
                 )
+                from src.discord_bot.views import MealInspirationView
                 view = MealInspirationView(user_id, remaining)
                 await self._send_proactive_message(user_id, embed, view=view)
             except Exception as e:
@@ -260,17 +261,19 @@ class HealthButlerDiscordBot(Client):
 
             # /setup always triggers it, 'hi' only for new users
             if not onboarding_done or content_lower == "/setup":
-                greeting_text = f"Hi **{message.author.display_name}**! I'm **Health Butler**. Let's set up your profile for safety-first health advice."
-                
+                # v6.4: Show comprehensive guide with disclaimer
+                guide_embed = HealthButlerEmbed.build_new_user_guide_embed(message.author.display_name)
+
                 # Wrapped callback for modal
                 async def on_submit_wrapper(interaction, data):
                     await cmd._on_registration_modal_submit(interaction, data, HealthButlerEmbed)
 
-                view = OnboardingGreetingView(
-                    on_registration_submit=on_submit_wrapper, 
-                    embed_factory=HealthButlerEmbed
+                view = NewUserGuideView(
+                    on_registration_submit=on_submit_wrapper,
+                    embed_factory=HealthButlerEmbed,
+                    guild=message.guild
                 )
-                await message.reply(greeting_text, view=view)
+                await message.reply(embed=guide_embed, view=view)
                 return
 
         if message.content.strip().lower().startswith("/demo"):
@@ -513,6 +516,7 @@ class HealthButlerDiscordBot(Client):
                     embed = self._build_nutrition_embed(data)
                     view = None
                     if scan_mode:
+                        from src.discord_bot.views import MealLogView
                         view = MealLogView(
                             self,
                             user_id=str(interaction_user_id),
@@ -536,7 +540,18 @@ class HealthButlerDiscordBot(Client):
                 elif "summary" in data and ("recommendations" in data or "exercises" in data):
                     user_profile = pu.get_user_profile(str(interaction_user_id))
                     display_name = user_profile.get("name") or "User"
-                    embed = self._build_fitness_embed(data, user_name=display_name)
+                    # Extract budget_progress from agent response (v6.2)
+                    budget_progress = data.get("budget_progress")
+                    # Extract empathy_strategy and user_habits (v6.3)
+                    empathy_strategy = data.get("empathy_strategy")
+                    user_habits = data.get("user_habits")
+                    embed = self._build_fitness_embed(
+                        data,
+                        user_name=display_name,
+                        budget_progress=budget_progress,
+                        empathy_strategy=empathy_strategy,
+                        user_habits=user_habits
+                    )
                     await self._persist_fitness_plan(data, interaction_user_id)
                     await channel.send(embed=embed, view=LogWorkoutView(self, data, interaction_user_id))
                 else:
@@ -917,9 +932,22 @@ class HealthButlerDiscordBot(Client):
         workout_line = f"• {workout_sentence}"
         return "\n".join([tip_line, status_line, workout_line])
 
-    def _build_fitness_embed(self, data: Dict[str, Any], user_name: str = "User") -> Embed:
+    def _build_fitness_embed(
+        self,
+        data: Dict[str, Any],
+        user_name: str = "User",
+        budget_progress: Optional[Dict[str, Any]] = None,
+        empathy_strategy: Optional[Dict[str, Any]] = None,
+        user_habits: Optional[Dict[str, Any]] = None
+    ) -> Embed:
         """Build fitness-specific embed for structured FitnessAgent output using HealthButlerEmbed factory."""
-        return HealthButlerEmbed.build_fitness_card(data, user_name=user_name)
+        return HealthButlerEmbed.build_fitness_card(
+            data,
+            user_name=user_name,
+            budget_progress=budget_progress,
+            empathy_strategy=empathy_strategy,
+            user_habits=user_habits
+        )
 
     async def _persist_fitness_plan(self, data: Dict[str, Any], user_id: str) -> None:
         """Persist recommended workouts so plans are tracked in Supabase."""
@@ -1078,7 +1106,7 @@ class HealthButlerDiscordBot(Client):
 
                     # Also update local cache
                     if user_id in pu._user_profiles_cache:
-                        pu._user_profiles_cache[author_id].setdefault("meals", []).append(meal_record)
+                        pu._user_profiles_cache[user_id].setdefault("meals", []).append(meal_record)
 
                 return meal_record
 

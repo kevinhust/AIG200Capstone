@@ -18,6 +18,7 @@ import json
 import logging
 import tempfile
 import urllib.request
+import asyncio
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -68,7 +69,7 @@ def test_multilingual_intent_detection():
     ]
 
     for text, expected_agents in test_cases:
-        delegations = coordinator.analyze_and_delegate(text)
+        delegations = asyncio.run(coordinator.analyze_and_delegate(text))
         actual_agents = [d["agent"] for d in delegations]
 
         status = "✅" if set(actual_agents) == set(expected_agents) else "❌"

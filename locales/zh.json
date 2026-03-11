@@ -1,0 +1,98 @@
+{
+  "onboarding": {
+    "welcome_title": "👋 欢迎来到健康管家！",
+    "welcome_description": "我是你的个人健康管家。我集成了 YOLO11 视觉感知、 Mifflin-St Jeor 营养引擎 和 Swarm 智能协同，旨在为你提供 24/7 的专业守护。",
+    "quick_setup_title": "📋 快速设置 (3步)",
+    "quick_setup_steps": [
+      "1️⃣ **基础信息**：年龄、身高、体重",
+      "2️⃣ **目标设定**：你的健身目标",
+      "3️⃣ **安全信息**：过敏源与健康情况"
+    ],
+    "step_1_description": "请输入你的基础生理数据，以便计算你的 TDEE（每日能量需求）",
+    "step_2_description": "选择你的性别、健身目标和活动水平。",
+    "step_3_description": "帮助我们了解你的过敏源和健康状况，确保你的安全。",
+    "privacy_title": "🔒 隐私优先",
+    "privacy_description": [
+      "• 设置在 **#general** 公共频道完成",
+      "• 设置完成后，我会创建一个 **私人频道** 专门给你使用!",
+      "• 你的日常健康记录将保持隐私。"
+    ],
+    "accept_button": "接受并开始",
+    "view_terms_button": "查看完整条款",
+    "learn_more_button": "了解更多",
+    "disclaimer_title": "⚠️ 免责声明",
+    "disclaimer_description": "Health Butler 仅提供 **一般健康信息**。\n• 不能替代专业医疗建议\n• 如有严重健康问题，请咨询医疗专业人士\n• 你的数据将被安全存储，从不分享给第三方"
+  },
+  "workout_log": {
+    "log_title": "🏃 记录运动",
+    "log_description": "记录你的运动！支持文本或图片。",
+    "examples": [
+      "我做了30分钟瑜伽",
+      "或者去跑步了"
+    ]
+  },
+  "nutrition_log": {
+    "log_title": "📸 记录饮食",
+    "log_description": "发送你的食物照片!",
+    "examples": [
+      "发了一张午餐的照片",
+      "刚吃完一个苹果"
+    ]
+  },
+  "check_progress": {
+    "trends_title": "📊 查看进度",
+    "trends_description": "查看你的健康数据分析。",
+    "profile_title": "👤 个人资料",
+    "profile_description": "查看你的个人统计信息。",
+    "settings_title": "⚙️ 设置",
+    "settings_description": "管理你的偏好设置。",
+    "help_title": "❓ 帮助",
+    "help_description": "完整命令列表。",
+    "error_generic": "⚠️ 出错了",
+    "error_not_found": "未找到",
+    "error_permission": "权限不足",
+    "error_database": "数据库错误"
+  },
+  "buttons": {
+    "start_setup": "开始设置",
+    "view_terms": "查看条款",
+    "learn_more": "了解更多"
+  },
+  "meal_types": {
+    "breakfast": "早餐",
+    "lunch": "午餐",
+    "dinner": "晚餐",
+    "snack": "零食"
+  },
+  "workout_types": {
+    "yoga": "瑜伽",
+    "running": "跑步",
+    "swimming": "游泳",
+    "cycling": "骑行",
+    "strength": "力量训练",
+    "cardio": "有氧运动"
+  },
+  "goals": {
+    "lose_weight": "减脂",
+    "maintain": "维持",
+    "build_muscle": "增肌",
+    "improve_health": "改善健康"
+  },
+  "activities": {
+    "sedentary": "久坐",
+    "lightly_active": "轻度活动",
+    "moderately_active": "中度活动",
+    "very_active": "非常活动"
+  },
+  "time_units": {
+    "minutes": "分钟",
+    "hours": "小时"
+  },
+  "nutrition": {
+    "calories": "卡路里",
+    "protein": "蛋白质",
+    "carbs": "碳水",
+    "fat": "脂肪",
+    "fiber": "纤维"
+  }
+}

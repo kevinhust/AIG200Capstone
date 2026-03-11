@@ -80,6 +80,74 @@ class OnboardingGreetingView(ui.View):
         # Transition from simple text to premium embed
         await interaction.response.edit_message(content=None, embed=embed, view=view)
 
+
+class NewUserGuideView(ui.View):
+    """
+    Initial Guide View for new users saying "hi" in #general (v6.4).
+
+    Shows:
+    - Quick setup overview (3 steps)
+    - Privacy explanation
+    - Disclaimer
+    - Accept & Start button
+
+    After onboarding, creates a private channel for daily logging.
+    """
+    def __init__(self, on_registration_submit: Any, embed_factory: Any, guild: Optional[discord.Guild] = None):
+        super().__init__(timeout=None)
+        self.on_registration_submit = on_registration_submit
+        self.embed_factory = embed_factory
+        self.guild = guild
+
+    @ui.button(label='Accept & Start', style=discord.ButtonStyle.green, emoji='✅')
+    async def accept_and_start(self, interaction: discord.Interaction, button: ui.Button):
+        """User accepts disclaimer and starts onboarding."""
+        # Open Step 1/3 Modal
+        await interaction.response.send_modal(RegistrationModal(on_submit_callback=self.on_registration_submit))
+
+    @ui.button(label='View Full Terms', style=discord.ButtonStyle.blurple, emoji='📄')
+    async def view_terms(self, interaction: discord.Interaction, button: ui.Button):
+        """Show full terms of service."""
+        terms_text = (
+            "**📜 Health Butler Terms of Service**\n\n"
+            "**1. General Information Only**\n"
+            "Health Butler provides general health and fitness information for educational purposes. "
+            "This is NOT medical advice.\n\n"
+            "**2. No Doctor-Patient Relationship**\n"
+            "Using this bot does not create a healthcare provider-patient relationship.\n\n"
+            "**3. Consult Professionals**\n"
+            "Always consult qualified healthcare professionals before:\n"
+            "• Starting any new diet or exercise program\n"
+            "• Making significant lifestyle changes\n"
+            "• Treating any health condition\n\n"
+            "**4. Data Privacy**\n"
+            "• Your health data is encrypted and stored securely\n"
+            "• We never sell or share your personal information\n"
+            "• You can request data deletion at any time with `/reset`\n\n"
+            "**5. Limitation of Liability**\n"
+            "Health Butler and its creators are not liable for any health outcomes "
+            "resulting from use of this service."
+        )
+        await interaction.response.send_message(terms_text, ephemeral=True)
+
+    @ui.button(label='Learn More', style=discord.ButtonStyle.gray, emoji='❓')
+    async def learn_more(self, interaction: discord.Interaction, button: ui.Button):
+        """Show feature overview."""
+        info_text = (
+            "**🏥 Health Butler Features**\n\n"
+            "**📸 Food Analysis**\n"
+            "Send a photo of your meal → Get calorie & nutrition breakdown\n\n"
+            "**🏃 Workout Planning**\n"
+            "Get personalized exercise recommendations based on your goals\n\n"
+            "**📊 Progress Tracking**\n"
+            "Monitor your daily/weekly health metrics\n\n"
+            "**🛡️ Safety Guardrails**\n"
+            "Automatic warnings for allergy conflicts and over-exertion\n\n"
+            "**🔒 Private Channel**\n"
+            "After setup, you'll get a private channel for daily logs"
+        )
+        await interaction.response.send_message(info_text, ephemeral=True)
+
 class StartSetupView(discord.ui.View):
     def __init__(self, on_submit_callback):
         super().__init__(timeout=None)
@@ -456,14 +524,17 @@ class RegistrationViewB(ui.View):
                 color=discord.Color.gold()
             )
             embed.set_footer(text="🛡️ BR-001: Medical Disclaimer - Not a substitute for professional advice.")
-            
+
             # Standard v3.0 buttons like 'Log Meal' would go in a new View, but for now we finish.
             await interaction.response.edit_message(
                 embed=embed,
                 view=None
             )
-            
+
             await interaction.followup.send("🚀 **Profile Activated!** You are all set.", ephemeral=True)
+
+            # v6.4: Create private channel for daily health logging
+            await self._create_private_health_channel(interaction)
 
         except Exception as e:
             logger.error(f"Persistence error: {e}")
@@ -472,6 +543,137 @@ class RegistrationViewB(ui.View):
             else:
                 await interaction.followup.send("⚠️ Error saving profile. Please contact support.", ephemeral=True)
 
+    async def _create_private_health_channel(self, interaction: discord.Interaction):
+        """
+        v6.4: Create a private channel for daily health logging.
+
+        Creates a private text channel accessible only by the user and bot,
+        then sends a welcome message with quick-start instructions.
+        """
+        try:
+            guild = interaction.guild
+            if not guild:
+                logger.warning("Cannot create private channel: no guild context")
+                return
+
+            user = interaction.user
+            base_name = user.display_name.lower().replace(' ', '-')
+            channel_name = f"health-{base_name}"[:27]
+
+            # Check if channel already exists
+            existing = discord.utils.get(guild.text_channels, name=channel_name)
+            if existing:
+                logger.info(f"Private channel already exists for user {user.id}")
+                await existing.send(
+                    f"👋 Welcome back, **{user.display_name}**! "
+                    f"Your profile has been updated. Ready to log your health journey!"
+                )
+                return
+
+            # Create private channel with specific permissions
+            overwrites = {
+                guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+                user: discord.PermissionOverwrite(read_messages=True, send_messages=True)
+            }
+
+
+            # Try to find or create a "Health Channels" category
+            category = discord.utils.get(guild.categories, name="Health Channels")
+            if not category:
+                try:
+                    category = await guild.create_category(
+                        "Health Channels",
+                        reason="Category for private health logging channels"
+                    )
+                except Exception as cat_err:
+                    logger.warning(f"Could not create category: {cat_err}")
+                    category = None
+
+
+
+            # Create the private channel
+            private_channel = await guild.create_text_channel(
+                channel_name,
+                overwrites=overwrites,
+                category=category,
+                topic=f"Private health logging for {user.display_name}",
+                reason=f"Private health channel for {user.display_name}"
+            )
+
+
+            logger.info(f"Created private channel {private_channel.name} for user {user.id}")
+
+
+            # Send welcome message to private channel
+            welcome_embed = discord.Embed(
+                title="🏠 Your Private Health Hub",
+                description=(
+                    f"Welcome, **{user.display_name}**! This is your personal space for daily health logging.\n\n"
+                    "**Quick Start Guide:**"
+                ),
+                color=discord.Color.green()
+            )
+
+
+            welcome_embed.add_field(
+                name="📸 Log a Meal",
+                value="Just send a photo of your food here!\nI'll analyze the calories and nutrition.",
+                inline=False
+            )
+            welcome_embed.add_field(
+                name="🏃 Log a Workout",
+                value="Type something like:\n`I did 30 minutes of yoga`\n`or\n`went for a run`",
+                inline=False
+            )
+            welcome_embed.add_field(
+                name="📊 Check Progress",
+                value="`/trends` - View your health analytics\n`/profile` - See your stats",
+                inline=False
+            )
+            welcome_embed.add_field(
+                name="⚙️ Settings",
+                value="`/settings` - Manage your preferences\n`/help` - Full command list",
+                inline=False
+            )
+
+
+            welcome_embed.set_footer(text="🔒 This channel is private - only you can see it")
+
+
+            await private_channel.send(embed=welcome_embed)
+
+
+            # Store channel ID in user preferences
+            from src.discord_bot.profile_db import get_profile_db
+            db = get_profile_db()
+            prefs = self.profile_buffer.get("preferences_json", {})
+            prefs["private_channel_id"] = str(private_channel.id)
+            db.update_profile(self.user_id, preferences_json=prefs)
+
+
+            logger.info(f"[Onboarding] Stored private channel ID for user {self.user_id}")
+
+
+            # Notify user in the original channel
+            await interaction.followup.send(
+                f"🔒 **Private channel created!** Check out <#{private_channel.id}> for daily logging.",
+                ephemeral=True
+            )
+        except discord.Forbidden:
+            logger.warning("Bot lacks permissions to create private channels")
+            await interaction.followup.send(
+                "⚠️ Could not create private channel (missing permissions). "
+                "You can still use DMs for private logging!",
+                ephemeral=True
+            )
+        except Exception as e:
+            logger.error(f"Error creating private channel: {e}")
+            await interaction.followup.send(
+                "⚠️ Could not create private channel, but your profile is saved! "
+                "Use DMs for private health logging.",
+                ephemeral=True
+            )
 class SettingsView(discord.ui.View):
     """View for managing user notification settings."""
     def __init__(self, user_id: str, profile: Dict[str, Any]):

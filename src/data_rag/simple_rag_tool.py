@@ -195,15 +195,18 @@ class SimpleRagTool:
                                  user_query: str,
                                  user_conditions: List[str],
                                  top_k: int = 5,
-                                 dynamic_risks: Optional[List[str]] = None) -> Dict[str, Any]:
+                                 dynamic_risks: Optional[List[str]] = None,
+                                 empathy_strategy: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
-        Safety-First Retrieval Algorithm.
+        Safety-First Retrieval Algorithm with Preference Awareness (v6.3).
 
         Args:
             user_query: The exercise query from user
             user_conditions: Static health conditions (e.g., knee injury)
             top_k: Number of recommendations to return
-            dynamic_risks: Dynamic risks from Health Memo (e.g., fried, high_oil)
+            dynamic_risks: Dynamic risks from Health Memo (e.g., fried, high_sugar)
+            empathy_strategy: Optional empathy message when preference conflicts with safety (v6.3)
 
         Returns:
             Dict with safe_exercises, safety_warnings, dynamic_adjustments
