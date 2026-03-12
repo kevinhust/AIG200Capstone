@@ -168,6 +168,100 @@ class HealthButlerEmbed:
         return embed
 
     @staticmethod
+    def build_proactive_nudge_embed(
+        user_name: str,
+        exercise_name: str,
+        time_window: Dict[str, Any],
+        budget_progress: Optional[Dict[str, Any]] = None,
+        empathy_strategy: Optional[Dict[str, Any]] = None
+    ) -> discord.Embed:
+        """
+        Build a proactive nudge embed for workout reminders.
+
+        v7.0: Personalized reminders based on detected time patterns.
+
+        Args:
+            user_name: User's display name
+            exercise_name: The exercise to remind about
+            time_window: Time window dict with day_name, hour_bucket, confidence
+            budget_progress: Optional budget progress dict
+            empathy_strategy: Optional empathy strategy for personalized messaging
+
+        Returns:
+            Discord Embed with the nudge message
+        """
+        # Determine message tone based on budget status
+        if budget_progress:
+            status = budget_progress.get("status", "good")
+            remaining = budget_progress.get("remaining", 0)
+            remaining_pct = budget_progress.get("remaining_pct", 100)
+        else:
+            status = "good"
+            remaining = 0
+            remaining_pct = 100
+
+        # Select appropriate template based on budget status
+        if status == "good" or remaining_pct >= 40:
+            title = f"🧘 又是你的 {exercise_name} 时间了！"
+            description = (
+                f"嗨 {user_name}！今天是{time_window.get('day_name', '今天')}的"
+                f"{time_window.get('hour_bucket', '这个时候')}，\n"
+                f"你的能量充裕，正是活动的好时机～ ✨"
+            )
+            color = discord.Color.green()
+        elif status == "warning" or remaining_pct >= 20:
+            title = f"💪 该做 {exercise_name} 了！"
+            description = (
+                f"嘿 {user_name}，今天的能量预算还剩一些，\n"
+                f"轻度活动正合适，动起来吧～ 💫"
+            )
+            color = discord.Color.gold()
+        else:  # critical
+            title = f"🧘 建议来个温和的 {exercise_name}"
+            description = (
+                f"{user_name}，今天能量预算比较紧张，\n"
+                f"不过温和的活动能帮你舒缓一下～ 🌿"
+            )
+            color = discord.Color.orange()
+
+        embed = discord.Embed(
+            title=title,
+            description=description,
+            color=color,
+            timestamp=datetime.utcnow()
+        )
+
+        # Add empathy insight if available
+        if empathy_strategy and empathy_strategy.get("empathy_message"):
+            embed.add_field(
+                name="💡 Butler's Insight",
+                value=f"> *{empathy_strategy['empathy_message']}*",
+                inline=False
+            )
+
+        # Add budget context
+        if budget_progress:
+            calorie_bar = budget_progress.get("calorie_bar", "")
+            status_emoji = budget_progress.get("status_emoji", "🟢")
+            embed.add_field(
+                name="📊 Today's Energy Status",
+                value=f"{calorie_bar}\n**Remaining**: {remaining:.0f} kcal ({remaining_pct:.1f}%)",
+                inline=False
+            )
+
+        # Add pattern confidence info
+        confidence = time_window.get("confidence", 0)
+        frequency = time_window.get("frequency", 0)
+        embed.add_field(
+            name="🎯 Pattern Detected",
+            value=f"你在这个时间段做{exercise_name}已经 **{frequency}** 次了",
+            inline=False
+        )
+
+        embed.set_footer(text="Health Butler v7.0 Proactive Nudging • Powered by AI")
+        return embed
+
+    @staticmethod
     def build_error_embed(message: str) -> discord.Embed:
         return discord.Embed(
             title="⚠️ System Notice",

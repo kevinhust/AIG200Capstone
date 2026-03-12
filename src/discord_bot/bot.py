@@ -25,6 +25,7 @@ from src.discord_bot.profile_db import get_profile_db
 from src.discord_bot import profile_utils as pu
 from src.discord_bot import intent_parser as ip
 from src.discord_bot import commands as cmd
+from src.scheduler import detect_time_windows, get_current_matching_windows
 from typing import Optional, List, Dict, Any
 from aiohttp import web
 
@@ -79,7 +80,15 @@ class HealthButlerDiscordBot(Client):
             self.morning_checkin.start()
         if not self.nightly_summary.is_running():
             self.nightly_summary.start()
-        
+        if not self.pre_meal_reminder.is_running():
+            self.pre_meal_reminder.start()
+
+        # v7.0: Start proactive nudging loops
+        if not self.proactive_workout_nudge.is_running():
+            self.proactive_workout_nudge.start()
+        if not self.refresh_time_windows.is_running():
+            self.refresh_time_windows.start()
+
         # Start health check server within the loop
         asyncio.create_task(self._start_health_server())
 
@@ -192,15 +201,154 @@ class HealthButlerDiscordBot(Client):
                     ),
                     color=discord.Color.green()
                 )
-                from src.discord_bot.views import MealInspirationView
+                from src.discord_bot.roulette_view import MealInspirationView
                 view = MealInspirationView(user_id, remaining)
                 await self._send_proactive_message(user_id, embed, view=view)
             except Exception as e:
                 logger.error(f"Error in pre_meal_reminder for {user_id}: {e}")
 
+    # ==================== v7.0 Proactive Nudging ====================
+
+    @tasks.loop(time=[time(h, 0, tzinfo=pu.LOCAL_TZ) for h in range(7, 23)])
+    async def proactive_workout_nudge(self):
+        """
+        Proactive workout reminders based on detected time patterns (v7.0).
+
+        Runs hourly from 7:00 to 22:00, checking if any user's detected
+        time window matches the current hour bucket.
+        """
+        logger.info("🏃 Running proactive workout nudge check...")
+
+        # Track which users received nudges today (one per user per day max)
+        today_str = datetime.now(pu.LOCAL_TZ).strftime("%Y-%m-%d")
+
+        for user_id in list(pu._user_profiles_cache.keys()):
+            try:
+                # Check if already nudged today
+                nudged_today = pu.get_user_nudge_status(user_id, today_str)
+                if nudged_today:
+                    continue
+
+                # Get user's time windows
+                time_windows = pu.get_user_time_windows(user_id)
+                if not time_windows:
+                    continue
+
+                # Find matching windows for current time
+                matching = get_current_matching_windows(
+                    time_windows,
+                    timezone=pu.LOCAL_TZ
+                )
+
+                if not matching:
+                    continue
+
+                # Get the highest confidence match
+                best_match = matching[0]
+                window_dict = best_match.to_dict()
+
+                # Get user profile and budget progress
+                profile = pu.get_user_profile(user_id)
+                user_name = profile.get("name", "there")
+
+                # Get budget progress if available
+                budget_progress = None
+                if pu.profile_db:
+                    try:
+                        stats = pu.profile_db.get_today_stats(user_id)
+                        target = pu.calculate_daily_target(profile)
+                        consumed = stats.get("total_calories", 0)
+                        remaining = max(0, target - consumed)
+                        remaining_pct = (remaining / target * 100) if target > 0 else 100
+
+                        status = "good"
+                        if remaining_pct < 20:
+                            status = "critical"
+                        elif remaining_pct < 40:
+                            status = "warning"
+
+                        budget_progress = {
+                            "remaining": remaining,
+                            "remaining_pct": remaining_pct,
+                            "consumed": consumed,
+                            "target": target,
+                            "status": status,
+                            "status_emoji": {"good": "🟢", "warning": "🟡", "critical": "🔴"}.get(status, "🟢"),
+                            "calorie_bar": HealthButlerEmbed.render_budget_progress_bar(
+                                (consumed / target * 100) if target > 0 else 0, remaining_pct
+                            ),
+                        }
+                    except Exception as e:
+                        logger.warning(f"Failed to get budget progress for {user_id}: {e}")
+
+                # Build the nudge embed
+                embed = HealthButlerEmbed.build_proactive_nudge_embed(
+                    user_name=user_name,
+                    exercise_name=best_match.exercise_name,
+                    time_window=window_dict,
+                    budget_progress=budget_progress,
+                )
+
+                # Create feedback view
+                from src.discord_bot.views import ProactiveNudgeView
+                view = ProactiveNudgeView(user_id, best_match.exercise_name)
+
+                # Send the nudge
+                await self._send_proactive_message(user_id, embed, view=view)
+
+                # Mark as nudged today
+                pu.set_user_nudge_status(user_id, today_str, True)
+
+                logger.info(f"✅ Sent proactive nudge to {user_name} for {best_match.exercise_name}")
+
+            except Exception as e:
+                logger.error(f"Error in proactive_workout_nudge for {user_id}: {e}")
+
+    @tasks.loop(time=time(6, 0, tzinfo=pu.LOCAL_TZ))
+    async def refresh_time_windows(self):
+        """
+        Refresh time window detections for all users (v7.0).
+
+        Runs daily at 6:00 AM to update pattern detections based on
+        the latest workout logs.
+        """
+        logger.info("🔄 Refreshing time window detections for all users...")
+
+        for user_id in list(pu._user_profiles_cache.keys()):
+            try:
+                # Fetch workout logs from the past 14 days
+                if not pu.profile_db:
+                    continue
+
+                workout_logs = pu.profile_db.get_workout_logs(
+                    user_id,
+                    days=14
+                )
+
+                if not workout_logs:
+                    continue
+
+                # Detect time windows
+                windows = detect_time_windows(
+                    workout_logs,
+                    min_frequency=2,
+                    days_back=14,
+                    timezone=pu.LOCAL_TZ,
+                )
+
+                # Cache the windows
+                pu.set_user_time_windows(user_id, windows)
+
+                logger.info(f"✅ Refreshed {len(windows)} time windows for user {user_id}")
+
+            except Exception as e:
+                logger.error(f"Error refreshing time windows for {user_id}: {e}")
+
     @morning_checkin.before_loop
     @nightly_summary.before_loop
     @pre_meal_reminder.before_loop
+    @proactive_workout_nudge.before_loop
+    @refresh_time_windows.before_loop
     async def before_loops(self):
         await self.wait_until_ready()
 
@@ -385,7 +533,7 @@ class HealthButlerDiscordBot(Client):
             return
 
         if message.content.strip().lower().startswith("!settings"):
-            await self._handle_settings_command(message)
+            await cmd.handle_settings_command(message)
             return
 
         if message.content.strip().lower() in ("/exit", "/quit"):
@@ -553,6 +701,7 @@ class HealthButlerDiscordBot(Client):
                         user_habits=user_habits
                     )
                     await self._persist_fitness_plan(data, interaction_user_id)
+                    from src.discord_bot.views import LogWorkoutView
                     await channel.send(embed=embed, view=LogWorkoutView(self, data, interaction_user_id))
                 else:
                     # Fallback for other specialist agents or generic JSON
