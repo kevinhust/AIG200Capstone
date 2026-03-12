@@ -173,12 +173,16 @@ class HealthButlerEmbed:
         exercise_name: str,
         time_window: Dict[str, Any],
         budget_progress: Optional[Dict[str, Any]] = None,
-        empathy_strategy: Optional[Dict[str, Any]] = None
+        empathy_strategy: Optional[Dict[str, Any]] = None,
+        image_url: Optional[str] = None,
+        met_value: Optional[float] = None,
+        intensity: Optional[str] = None
     ) -> discord.Embed:
         """
         Build a proactive nudge embed for workout reminders.
 
         v7.0: Personalized reminders based on detected time patterns.
+        v7.1: Added image_url, met_value, intensity support for visual enhancement.
 
         Args:
             user_name: User's display name
@@ -186,6 +190,9 @@ class HealthButlerEmbed:
             time_window: Time window dict with day_name, hour_bucket, confidence
             budget_progress: Optional budget progress dict
             empathy_strategy: Optional empathy strategy for personalized messaging
+            image_url: Optional exercise demonstration image URL (v7.1)
+            met_value: Optional MET value for scientific context (v7.1)
+            intensity: Optional intensity level (low/moderate/high) (v7.1)
 
         Returns:
             Discord Embed with the nudge message
@@ -200,20 +207,31 @@ class HealthButlerEmbed:
             remaining = 0
             remaining_pct = 100
 
+        # Build intensity badge
+        intensity_badge = ""
+        if intensity:
+            intensity_icons = {"low": "🟢", "moderate": "🟡", "high": "🔴"}
+            intensity_badge = f" {intensity_icons.get(intensity, '⚪')} {intensity.upper()}"
+
+        # MET info for description
+        met_info = ""
+        if met_value:
+            met_info = f"\n📊 **MET**: {met_value}"
+
         # Select appropriate template based on budget status
         if status == "good" or remaining_pct >= 40:
-            title = f"🧘 又是你的 {exercise_name} 时间了！"
+            title = f"🧘 又是你的 {exercise_name} 时间了！{intensity_badge}"
             description = (
                 f"嗨 {user_name}！今天是{time_window.get('day_name', '今天')}的"
                 f"{time_window.get('hour_bucket', '这个时候')}，\n"
-                f"你的能量充裕，正是活动的好时机～ ✨"
+                f"你的能量充裕，正是活动的好时机～ ✨{met_info}"
             )
             color = discord.Color.green()
         elif status == "warning" or remaining_pct >= 20:
-            title = f"💪 该做 {exercise_name} 了！"
+            title = f"💪 该做 {exercise_name} 了！{intensity_badge}"
             description = (
                 f"嘿 {user_name}，今天的能量预算还剩一些，\n"
-                f"轻度活动正合适，动起来吧～ 💫"
+                f"轻度活动正合适，动起来吧～ 💫{met_info}"
             )
             color = discord.Color.gold()
         else:  # critical
@@ -258,7 +276,11 @@ class HealthButlerEmbed:
             inline=False
         )
 
-        embed.set_footer(text="Health Butler v7.0 Proactive Nudging • Powered by AI")
+        # v7.1: Add exercise demonstration image if available
+        if image_url:
+            embed.set_image(url=image_url)
+
+        embed.set_footer(text="Health Butler v7.1 MET Science • Visual Exercise Guide")
         return embed
 
     @staticmethod

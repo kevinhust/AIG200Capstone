@@ -281,12 +281,31 @@ class HealthButlerDiscordBot(Client):
                     except Exception as e:
                         logger.warning(f"Failed to get budget progress for {user_id}: {e}")
 
-                # Build the nudge embed
+                # v7.1: Get exercise image URL and MET info from RAG cache
+                exercise_image_url = None
+                met_value = None
+                intensity = None
+
+                try:
+                    # Search for exercise in RAG cache
+                    for ex in self.rag.exercises:
+                        if ex.get("name", "").lower() == best_match.exercise_name.lower():
+                            exercise_image_url = ex.get("image_url")
+                            met_value = ex.get("met_value")
+                            intensity = ex.get("intensity")
+                            break
+                except Exception as e:
+                    logger.debug(f"Could not get exercise image for {best_match.exercise_name}: {e}")
+
+                # Build the nudge embed with image and MET info (v7.1)
                 embed = HealthButlerEmbed.build_proactive_nudge_embed(
                     user_name=user_name,
                     exercise_name=best_match.exercise_name,
                     time_window=window_dict,
                     budget_progress=budget_progress,
+                    image_url=exercise_image_url,
+                    met_value=met_value,
+                    intensity=intensity,
                 )
 
                 # Create feedback view
