@@ -5,6 +5,12 @@ import re
 from functools import lru_cache
 from src.agents.base_agent import BaseAgent
 from src.data_rag.simple_rag_tool import SimpleRagTool
+from src.data_rag.met_mapping import (
+    get_met_for_exercise,
+    calculate_calories,
+    get_equipment_type,
+    get_exercise_profile,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -738,10 +744,11 @@ Before finalizing recommendations, verify:
                 validated.append(rec)
             else:
                 # Replace with lower intensity alternative
+                # Note: kcal_estimate will be enriched by MET calculation in post-processing
                 validated.append({
                     "name": "Brisk Walking",
                     "duration_min": 20,
-                    "kcal_estimate": 100,
+                    "kcal_estimate": 100,  # Placeholder - enriched by MET formula later
                     "reason": "Lower intensity alternative - recent meal requires lighter activity"
                 })
 
@@ -755,6 +762,96 @@ Before finalizing recommendations, verify:
             return round(weight_kg / (height_m * height_m), 1)
         except:
             return 22.0
+
+    def _calculate_exercise_calories(
+        self,
+        exercise_name: str,
+        duration_min: float,
+        weight_kg: float,
+        category: str = "",
+        tags: List[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Calculate calories burned using MET-based formula.
+
+        Formula: Calories = MET × Weight(kg) × Duration(hours)
+
+        v7.1: Scientific calorie calculation based on Compendium of Physical Activities.
+
+        Args:
+            exercise_name: Name of the exercise
+            duration_min: Duration in minutes
+            weight_kg: User's weight in kg
+            category: Exercise category (optional)
+            tags: Exercise tags for better MET matching (optional)
+
+        Returns:
+            Dict with 'kcal_estimate', 'met_value', 'intensity'
+        """
+        if tags is None:
+            tags = []
+
+        # Get MET profile for this exercise
+        met_value, intensity = get_met_for_exercise(exercise_name, category, tags)
+
+        # Calculate calories using MET formula
+        calories = calculate_calories(met_value, weight_kg, duration_min)
+
+        return {
+            "kcal_estimate": calories,
+            "met_value": met_value,
+            "intensity": intensity,
+        }
+
+    def _enrich_recommendation_with_met(
+        self,
+        rec: Dict[str, Any],
+        weight_kg: float
+    ) -> Dict[str, Any]:
+        """
+        Enrich a recommendation dict with MET-based calorie calculation.
+
+        If kcal_estimate is missing or looks like a placeholder,
+        recalculate using MET formula.
+
+        Args:
+            rec: Recommendation dict with 'name', 'duration_min'
+            weight_kg: User's weight in kg
+
+        Returns:
+            Enriched recommendation dict
+        """
+        enriched = rec.copy()
+        name = rec.get("name", "Exercise")
+        duration = rec.get("duration_min", 20)
+
+        # Check if we need to recalculate calories
+        existing_kcal = rec.get("kcal_estimate", 0)
+        needs_calculation = (
+            existing_kcal == 0 or
+            existing_kcal == 80 or  # Common placeholder value
+            existing_kcal == 100 or
+            existing_kcal == 150
+        )
+
+        if needs_calculation:
+            calc_result = self._calculate_exercise_calories(
+                name, duration, weight_kg
+            )
+            enriched["kcal_estimate"] = calc_result["kcal_estimate"]
+            enriched["met_value"] = calc_result["met_value"]
+            enriched["intensity"] = calc_result["intensity"]
+        else:
+            # Infer intensity from existing kcal estimate
+            kcal_rate = (existing_kcal / duration * 30) if duration > 0 else 0
+            if kcal_rate >= 200:
+                enriched["intensity"] = "high"
+            elif kcal_rate >= 100:
+                enriched["intensity"] = "moderate"
+            else:
+                enriched["intensity"] = "low"
+
+        return enriched
 
     def _calculate_bmr(self, profile: Dict[str, Any]) -> float:
         """Calculate BMR using Mifflin-St Jeor Equation."""
@@ -944,6 +1041,16 @@ RAG SAFE EXERCISES: {safe_ex_list}.
                     result_json["safety_warnings"] = result_json.get("safety_warnings", []) + [BR001_DISCLAIMER]
                     result_json["dynamic_adjustments"] = BR001_DISCLAIMER
 
+            # v7.0: Enrich recommendations with MET-based calorie calculations
+            if "recommendations" in result_json:
+                weight_kg = user_profile.get("weight_kg", 70)
+                enriched_recs = [
+                    self._enrich_recommendation_with_met(rec, weight_kg)
+                    for rec in result_json["recommendations"]
+                ]
+                result_json["recommendations"] = enriched_recs
+                logger.info(f"[FitnessAgent] Enriched {len(enriched_recs)} recommendations with MET values")
+
             # Inject budget progress into response (v6.2)
             result_json["budget_progress"] = budget_progress
 
@@ -1127,6 +1234,16 @@ DYNAMIC ADJUSTMENTS: {dynamic_adjustments}.
                     result_json["safety_warnings"].append(BR001_DISCLAIMER)
                     result_json["dynamic_adjustments"] = BR001_DISCLAIMER
 
+            # 10. v7.0: Enrich recommendations with MET-based calorie calculations
+            if "recommendations" in result_json:
+                weight_kg = user_profile.get("weight_kg", 70)
+                enriched_recs = [
+                    self._enrich_recommendation_with_met(rec, weight_kg)
+                    for rec in result_json["recommendations"]
+                ]
+                result_json["recommendations"] = enriched_recs
+                logger.info(f"[FitnessAgent] Enriched {len(enriched_recs)} recommendations with MET values")
+
             return json.dumps(result_json)
 
         except Exception as e:
@@ -1135,13 +1252,18 @@ DYNAMIC ADJUSTMENTS: {dynamic_adjustments}.
             if raw:
                 return raw
             # Return a minimal safe JSON payload with disclaimer if warnings present
+            # v7.0: Use MET-based calculation for fallback
+            weight_kg = user_profile.get("weight_kg", 70) if user_profile else 70
+            fallback_calc = self._calculate_exercise_calories("Walking", 20, weight_kg)
             fallback = {
                 "summary": "Stay active safely!",
                 "recommendations": [
                     {
                         "name": "Walking",
                         "duration_min": 20,
-                        "kcal_estimate": 80,
+                        "kcal_estimate": fallback_calc["kcal_estimate"],
+                        "met_value": fallback_calc["met_value"],
+                        "intensity": fallback_calc["intensity"],
                         "reason": "General mobility - safe for all conditions",
                     }
                 ],
