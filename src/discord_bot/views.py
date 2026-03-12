@@ -1188,20 +1188,20 @@ class ProactiveNudgeView(ui.View):
 
             # Respond based on feedback type
             responses = {
-                "tired": "休息也很重要哦！明天再加油吧 😊",
-                "okay": "好的，有需要随时叫我！",
-                "good": "太棒了！继续保持～ 💪",
+                "tired": "Rest is important too! You can try again tomorrow 😊",
+                "okay": "Got it! Let me know if you need anything!",
+                "good": "Awesome! Keep up the great work! 💪",
             }
 
             await interaction.response.send_message(
-                responses.get(feedback_type, "谢谢你的反馈！"),
+                responses.get(feedback_type, "Thanks for your feedback!"),
                 ephemeral=True
             )
 
         except Exception as e:
             logger.error(f"Error recording nudge feedback: {e}")
             await interaction.response.send_message(
-                "反馈记录失败，不过没关系！",
+                "Failed to record feedback, but that's okay!",
                 ephemeral=True
             )
 
@@ -1217,8 +1217,8 @@ class ProactiveNudgeView(ui.View):
         embed = discord.Embed(
             title=f"🏃 {self.exercise_name} Time!",
             description=(
-                f"太棒了！开始你的 {self.exercise_name} 吧！\n\n"
-                f"完成后告诉我你运动了多久，我帮你记录消耗的卡路里。"
+                f"Great! Start your {self.exercise_name} now!\n\n"
+                f"After you finish, tell me how long you exercised and I'll log the calories burned."
             ),
             color=discord.Color.green(),
             timestamp=datetime.utcnow(),
@@ -1227,18 +1227,18 @@ class ProactiveNudgeView(ui.View):
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @discord.ui.button(label="太累了", style=discord.ButtonStyle.red, emoji="😫")
+    @discord.ui.button(label="Too Tired", style=discord.ButtonStyle.red, emoji="😫")
     async def feedback_tired(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._record_feedback(interaction, "tired")
 
-    @discord.ui.button(label="还行", style=discord.ButtonStyle.gray, emoji="😐")
+    @discord.ui.button(label="Maybe Later", style=discord.ButtonStyle.gray, emoji="😐")
     async def feedback_okay(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._record_feedback(interaction, "okay")
 
-    @discord.ui.button(label="很舒服", style=discord.ButtonStyle.green, emoji="😊")
+    @discord.ui.button(label="Feeling Good!", style=discord.ButtonStyle.green, emoji="😊")
     async def feedback_good(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._record_feedback(interaction, "good")
 
-    @discord.ui.button(label="现在开始", style=discord.ButtonStyle.blurple, emoji="🏃")
+    @discord.ui.button(label="Start Now", style=discord.ButtonStyle.blurple, emoji="🏃")
     async def start_now(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._initiate_workout(interaction)

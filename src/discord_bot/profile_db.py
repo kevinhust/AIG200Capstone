@@ -156,6 +156,13 @@ class ProfileDB:
             True if successful
         """
         try:
+            # Delete dependent records first to handle missing ON DELETE CASCADE
+            for table in ["chat_messages", "daily_logs", "meals", "workout_logs", "workout_routines"]:
+                try:
+                    self.client.table(table).delete().eq("user_id", discord_user_id).execute()
+                except Exception as child_exc:
+                    print(f"DEBUG: Failed to delete from {table} for {discord_user_id}: {child_exc}")
+                    
             response = self.client.table("profiles").delete().eq("id", discord_user_id).execute()
             return True
         except Exception as exc:

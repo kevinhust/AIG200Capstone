@@ -459,6 +459,16 @@ class HealthButlerDiscordBot(Client):
             await cmd.handle_help_command(message, HealthButlerEmbed)
             return
 
+        # v7.1: Test command for visualizing proactive nudge with exercise image
+        if message.content.strip().lower().startswith("/test_nudge"):
+            from src.discord_bot.views import ProactiveNudgeView
+            parts = message.content.strip().split(maxsplit=1)
+            exercise_name = parts[1] if len(parts) > 1 else None
+            await cmd.handle_test_nudge_command(
+                message, HealthButlerEmbed, ProactiveNudgeView, exercise_name
+            )
+            return
+
         # Phase 8: Sensitive Query Redirection
         # Redirect Summary, Trends, and Profile queries to DM if in a public channel.
         is_public = message.guild is not None

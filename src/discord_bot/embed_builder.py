@@ -220,25 +220,25 @@ class HealthButlerEmbed:
 
         # Select appropriate template based on budget status
         if status == "good" or remaining_pct >= 40:
-            title = f"🧘 又是你的 {exercise_name} 时间了！{intensity_badge}"
+            title = f"🧘 Time for your {exercise_name}!{intensity_badge}"
             description = (
-                f"嗨 {user_name}！今天是{time_window.get('day_name', '今天')}的"
-                f"{time_window.get('hour_bucket', '这个时候')}，\n"
-                f"你的能量充裕，正是活动的好时机～ ✨{met_info}"
+                f"Hi {user_name}! It's {time_window.get('day_name', 'today')}'s "
+                f"{time_window.get('hour_bucket', 'time')} slot.\n"
+                f"Your energy is abundant - perfect timing for activity! ✨{met_info}"
             )
             color = discord.Color.green()
         elif status == "warning" or remaining_pct >= 20:
-            title = f"💪 该做 {exercise_name} 了！{intensity_badge}"
+            title = f"💪 Let's do some {exercise_name}!{intensity_badge}"
             description = (
-                f"嘿 {user_name}，今天的能量预算还剩一些，\n"
-                f"轻度活动正合适，动起来吧～ 💫{met_info}"
+                f"Hey {user_name}, you still have some energy budget left today.\n"
+                f"Light activity would be perfect - let's get moving! 💫{met_info}"
             )
             color = discord.Color.gold()
         else:  # critical
-            title = f"🧘 建议来个温和的 {exercise_name}"
+            title = f"🧘 How about a gentle {exercise_name}?"
             description = (
-                f"{user_name}，今天能量预算比较紧张，\n"
-                f"不过温和的活动能帮你舒缓一下～ 🌿"
+                f"{user_name}, your energy budget is a bit tight today,\n"
+                f"but gentle activity can help you relax and recharge 🌿"
             )
             color = discord.Color.orange()
 
@@ -272,7 +272,7 @@ class HealthButlerEmbed:
         frequency = time_window.get("frequency", 0)
         embed.add_field(
             name="🎯 Pattern Detected",
-            value=f"你在这个时间段做{exercise_name}已经 **{frequency}** 次了",
+            value=f"You've done **{exercise_name}** at this time slot **{frequency}** times before",
             inline=False
         )
 
