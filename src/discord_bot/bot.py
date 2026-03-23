@@ -250,6 +250,51 @@ class HealthButlerDiscordBot(Client):
             await cmd.handle_reset_command(message, HealthButlerEmbed, OnboardingGreetingView)
             return
 
+        if content_lower.startswith("/repcount"):
+            args = content_lower.replace("/repcount", "").strip()
+            exercise = args if args else "squat"
+            video_attachment = next((a for a in message.attachments if a.content_type and a.content_type.startswith('video/')), None)
+            
+            if not video_attachment:
+                await message.reply("⚠️ Please attach a workout video to use `/repcount`.")
+                return
+                
+            async with message.channel.typing():
+                video_path = f"/tmp/{video_attachment.filename}"
+                await video_attachment.save(video_path)
+                status_msg = await message.channel.send(f"🏋️ *Analyzing {exercise} video... Please wait.*")
+                
+                try:
+                    user_context = {
+                        "video_path": video_path,
+                        "exercise": exercise
+                    }
+                    result = await self.swarm.execute_async(
+                        user_input="transfer_to_repcount", 
+                        user_context=user_context
+                    )
+                    
+                    stats = json.loads(result.get("response", "{}"))
+                    if "error" in stats:
+                        await status_msg.edit(content=f"❌ Error: {stats['error']}")
+                    else:
+                        embed = discord.Embed(
+                            title="📊 RepCount Analysis",
+                            color=discord.Color.blue()
+                        )
+                        embed.add_field(name="Exercise", value=stats.get('exercise', '').title(), inline=True)
+                        embed.add_field(name="Reps Counted", value=str(stats.get('rep_count', 0)), inline=True)
+                        embed.add_field(name="Video Duration", value=f"{stats.get('video_duration_sec')}s", inline=True)
+                        embed.set_footer(text="Powered by MediaPipe Pose")
+                        await status_msg.edit(content="", embed=embed)
+                except Exception as e:
+                    logger.error(f"RepCount Error: {e}")
+                    await status_msg.edit(content=f"⚠️ Error processing video: {str(e)}")
+                finally:
+                    if os.path.exists(video_path):
+                        os.remove(video_path)
+            return
+
         # Phase 6.1/6.2: Premium "Cold Start" Onboarding Hook
         greetings = ["hi", "hello", "你好", "start", "hey", "👋"]
         if content_lower in greetings or content_lower == "/setup":
