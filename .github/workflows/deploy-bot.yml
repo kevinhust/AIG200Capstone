@@ -100,8 +100,13 @@ jobs:
         with:
           service: ${{ env.SERVICE_NAME }}
           image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_NAME }}:latest
-          region: ${{ env.REGION }}
-          flags: '--memory 2Gi --cpu 1 --no-cpu-throttling --min-instances 1'
+          flags: |
+            --region us-central1
+            --memory 2Gi
+            --cpu 1
+            --no-cpu-throttling
+            --min-instances 1
+            --timeout 300
           env_vars: |-
             DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
             DISCORD_ACTIVITY=${{ secrets.DISCORD_ACTIVITY || 'Helping with nutrition & fitness' }}

@@ -63,7 +63,8 @@ class HealthButlerDiscordBot(Client):
             logger.warning(f"⚠️ ProfileDB init failed (continuing without persistence): {e}")
             pu.profile_db = None
 
-        self.swarm = HealthSwarm(verbose=True)
+        # Lazy initialize Swarm in setup_hook to avoid startup block
+        self.swarm = None # type: ignore
         self.start_time = datetime.now()
         # Optional demo safety allowlists (comma-separated IDs). Empty => allow all.
         self.allowed_user_ids = pu._parse_int_set(os.getenv("DISCORD_ALLOWED_USER_IDS"))
@@ -73,15 +74,20 @@ class HealthButlerDiscordBot(Client):
         logger.info("Health Butler Discord Bot initialized with Engagement and Analytics Agents")
 
     async def setup_hook(self):
-        logger.info("Bot setup_hook: starting proactive loops")
-        # Start loops
+        logger.info("Bot setup_hook: starting proactive loops and health server")
+        # 1. Start health check server FIRST within the loop to signal Cloud Run we are ALIVE
+        await self._start_health_server()
+        
+        # 2. Defer heavy Swarm/RAG initialization
+        logger.info("⚡ Initializing HealthSwarm (this may take a moment)...")
+        self.swarm = HealthSwarm(verbose=True)
+        logger.info("✅ HealthSwarm initialized")
+
+        # 3. Start loops
         if not self.morning_checkin.is_running():
             self.morning_checkin.start()
         if not self.nightly_summary.is_running():
             self.nightly_summary.start()
-        
-        # Start health check server within the loop
-        asyncio.create_task(self._start_health_server())
 
     async def _send_proactive_message(self, user_id: str, embed: discord.Embed, view: Optional[discord.ui.View] = None):
         """Helper to send proactive DM to user if allowed."""
@@ -227,7 +233,11 @@ class HealthButlerDiscordBot(Client):
         # Optional allowlists for demo safety (empty allowlist => allow all)
         if self.allowed_user_ids and message.author.id not in self.allowed_user_ids:
             return
-        if self.allowed_channel_ids and message.channel.id not in self.allowed_channel_ids:
+        # Ensure swarm is initialized (lazy load guard)
+        if not self.swarm:
+            logger.warning(f"⏳ Drop message from {message.author}: Swarm not ready")
+            if clean_content.lower() != "ping":
+                await message.reply("⏳ I'm still warming up my brain... please try again in 30 seconds!")
             return
 
         self._persist_chat_message(str(message.author.id), "user", message.content)
