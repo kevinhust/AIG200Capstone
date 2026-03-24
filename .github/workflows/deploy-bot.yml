@@ -96,27 +96,25 @@ jobs:
           docker push $IMAGE_LATEST
 
       - name: Deploy to Cloud Run
-        run: |
-          IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)
-          # AR path: REGION-docker.pkg.dev/PROJECT/REPO/IMAGE
-          IMAGE_FULL=${REGISTRY}/${PROJECT_ID}/${IMAGE_NAME}/${IMAGE_NAME}:${IMAGE_TAG}
-          echo "Deploying to Cloud Run..."
-          gcloud run deploy ${SERVICE_NAME} \
-            --image=$IMAGE_FULL \
-            --platform=managed \
-            --region=${REGION} \
-            --memory=4Gi \
-            --cpu=2 \
-            --no-cpu-throttling \
-            --min-instances=1 \
-            --max-instances=10 \
-            --timeout=3600s \
-            --concurrency=10 \
-            --set-secrets=DISCORD_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}:latest \
-            --set-env-vars=DISCORD_ACTIVITY=${{ secrets.DISCORD_ACTIVITY || 'Helping with nutrition & fitness' }},OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},OPENAI_MODEL=${{ secrets.OPENAI_MODEL }},USDA_API_KEY=${{ secrets.USDA_API_KEY }},GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }},SUPABASE_URL=${{ secrets.SUPABASE_URL }},SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }},DISCORD_ALLOWED_USER_IDS=${{ secrets.DISCORD_ALLOWED_USER_IDS }},DISCORD_ALLOWED_CHANNEL_IDS=${{ secrets.DISCORD_ALLOWED_CHANNEL_IDS }},DISCORD_GUILD_ID=${{ secrets.DISCORD_GUILD_ID }} \
-            --allow-unauthenticated \
-            --ingress=all \
-            --quiet
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_NAME }}:latest
+          region: ${{ env.REGION }}
+          flags: '--memory 2Gi --cpu 1 --no-cpu-throttling --min-instances 1'
+          env_vars: |-
+            DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
+            DISCORD_ACTIVITY=${{ secrets.DISCORD_ACTIVITY || 'Helping with nutrition & fitness' }}
+            DISCORD_ALLOWED_USER_IDS=${{ secrets.DISCORD_ALLOWED_USER_IDS }}
+            DISCORD_ALLOWED_CHANNEL_IDS=${{ secrets.DISCORD_ALLOWED_CHANNEL_IDS }}
+            DISCORD_GUILD_ID=${{ secrets.DISCORD_GUILD_ID }}
+            OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            OPENAI_MODEL=${{ secrets.OPENAI_MODEL }}
+            USDA_API_KEY=${{ secrets.USDA_API_KEY }}
+            GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Get Service URL
         id: service-url
