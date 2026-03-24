@@ -105,7 +105,7 @@ jobs:
             --timeout=3600s \
             --concurrency=10 \
             --set-secrets=DISCORD_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}:latest \
-            --set-env-vars=DISCORD_ACTIVITY=Helping_with_nutrition_and_fitness,OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},OPENAI_MODEL=${{ secrets.OPENAI_MODEL }},USDA_API_KEY=${{ secrets.USDA_API_KEY }},GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }},SUPABASE_URL=${{ secrets.SUPABASE_URL }},SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }} \
+            --set-env-vars=DISCORD_ACTIVITY=${{ secrets.DISCORD_ACTIVITY || 'Helping with nutrition & fitness' }},OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},OPENAI_MODEL=${{ secrets.OPENAI_MODEL }},USDA_API_KEY=${{ secrets.USDA_API_KEY }},GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }},SUPABASE_URL=${{ secrets.SUPABASE_URL }},SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }},DISCORD_ALLOWED_USER_IDS=${{ secrets.DISCORD_ALLOWED_USER_IDS }},DISCORD_ALLOWED_CHANNEL_IDS=${{ secrets.DISCORD_ALLOWED_CHANNEL_IDS }},DISCORD_GUILD_ID=${{ secrets.DISCORD_GUILD_ID }} \
             --allow-unauthenticated \
             --ingress=all \
             --quiet
