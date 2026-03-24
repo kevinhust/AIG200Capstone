@@ -1,0 +1,42 @@
+name: Teardown Environment
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "DELETE" to confirm'
+        required: true
+        default: ''
+
+jobs:
+  teardown:
+    name: Delete Cloud Run and Artifact Registry
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'DELETE'
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Get Project ID
+        run: |
+          echo "PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}" >> $GITHUB_ENV
+
+      - name: Delete Cloud Run Service
+        run: |
+          gcloud run services delete health-butler-discord-bot \
+            --region us-central1 \
+            --quiet || echo "Service not found or already deleted"
+
+      - name: Delete Artifact Registry Repository
+        run: |
+          gcloud artifacts repositories delete health-butler-bot \
+            --location us-central1 \
+            --quiet || echo "Repository not found or already deleted"
