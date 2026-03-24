@@ -81,13 +81,14 @@ jobs:
           echo "Project ID: ${{ secrets.GCP_PROJECT_ID }}"
 
       - name: Configure Docker to use gcloud credential
-        run: gcloud auth configure-docker --quiet
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
       - name: Build and push Docker image
         run: |
           IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)
-          IMAGE_FULL=${REGISTRY}/${PROJECT_ID}/${IMAGE_NAME}:${IMAGE_TAG}
-          IMAGE_LATEST=${REGISTRY}/${PROJECT_ID}/${IMAGE_NAME}:latest
+          # AR path: REGION-docker.pkg.dev/PROJECT/REPO/IMAGE
+          IMAGE_FULL=${REGISTRY}/${PROJECT_ID}/${IMAGE_NAME}/${IMAGE_NAME}:${IMAGE_TAG}
+          IMAGE_LATEST=${REGISTRY}/${PROJECT_ID}/${IMAGE_NAME}/${IMAGE_NAME}:latest
           echo "Building Docker image..."
           docker build -f Dockerfile -t $IMAGE_FULL -t $IMAGE_LATEST .
           echo "Pushing Docker image..."
@@ -97,7 +98,8 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)
-          IMAGE_FULL=${REGISTRY}/${PROJECT_ID}/${IMAGE_NAME}:${IMAGE_TAG}
+          # AR path: REGION-docker.pkg.dev/PROJECT/REPO/IMAGE
+          IMAGE_FULL=${REGISTRY}/${PROJECT_ID}/${IMAGE_NAME}/${IMAGE_NAME}:${IMAGE_TAG}
           echo "Deploying to Cloud Run..."
           gcloud run deploy ${SERVICE_NAME} \
             --image=$IMAGE_FULL \
