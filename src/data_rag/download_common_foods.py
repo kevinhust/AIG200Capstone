@@ -8,8 +8,9 @@ import json
 import time
 import requests
 from pathlib import Path
+import os
 
-API_KEY = "HI1Zkn5obOSoY7w1D1GwZVy1jmSUsmBbAfuyO0LH"
+API_KEY = os.getenv("USDA_API_KEY", "DEMO_KEY")
 BASE_URL = "https://api.nal.usda.gov/fdc/v1/foods/search"
 
 # Common everyday foods by category
