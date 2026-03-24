@@ -519,21 +519,22 @@ class RegistrationViewB(ui.View):
                     f"• Daily Target: **{self.profile_buffer.get('tdee', 2000)} kcal**\n"
                     f"• Health Goal: **{self.profile_buffer['goal'].title()}**\n"
                     f"• Safety Tags: {', '.join(self.selected_allergies) or 'None'}\n\n"
-                    "🔒 **Privacy Tip**: You can now create a **Private Channel** for secure health logging, or continue in DMs!"
+                    "🔒 **Privacy Tip**: For maximum safety, I suggest we continue our conversation in **Direct Messages (DMs)** or a **Private Thread**. Your health data is your own!"
                 ),
                 color=discord.Color.gold()
             )
             embed.set_footer(text="🛡️ BR-001: Medical Disclaimer - Not a substitute for professional advice.")
 
-            # v4.2: Transition to PostOnboardingView for manual channel creation
-            view = PostOnboardingView(self.user_id, self.profile_buffer)
-            
+            # Standard v3.0 buttons like 'Log Meal' would go in a new View, but for now we finish.
             await interaction.response.edit_message(
                 embed=embed,
-                view=view
+                view=None
             )
 
             await interaction.followup.send("🚀 **Profile Activated!** You are all set.", ephemeral=True)
+
+            # v6.4: Create private channel for daily health logging
+            await self._create_private_health_channel(interaction)
 
         except Exception as e:
             logger.error(f"Persistence error: {e}")
@@ -542,31 +543,12 @@ class RegistrationViewB(ui.View):
             else:
                 await interaction.followup.send("⚠️ Error saving profile. Please contact support.", ephemeral=True)
 
-class PostOnboardingView(ui.View):
-    """
-    Final View after onboarding (v4.2).
-    Offers a manual trigger to create a private health channel.
-    """
-    def __init__(self, user_id: str, profile_buffer: Dict[str, Any]):
-        super().__init__(timeout=None)
-        self.user_id = user_id
-        self.profile_buffer = profile_buffer
-
-    @ui.button(label="Create Private Channel", style=discord.ButtonStyle.green, emoji="🔒")
-    async def create_channel(self, interaction: discord.Interaction, button: ui.Button):
-        if str(interaction.user.id) != self.user_id:
-            return await interaction.response.send_message("This action is for someone else!", ephemeral=True)
-            
-        await interaction.response.defer(ephemeral=True)
-        await self._create_private_health_channel(interaction)
-        
-        # Disable button after attempt
-        button.disabled = True
-        await interaction.edit_original_response(view=self)
-
     async def _create_private_health_channel(self, interaction: discord.Interaction):
         """
         v6.4: Create a private channel for daily health logging.
+
+        Creates a private text channel accessible only by the user and bot,
+        then sends a welcome message with quick-start instructions.
         """
         try:
             guild = interaction.guild
@@ -582,7 +564,10 @@ class PostOnboardingView(ui.View):
             existing = discord.utils.get(guild.text_channels, name=channel_name)
             if existing:
                 logger.info(f"Private channel already exists for user {user.id}")
-                await interaction.followup.send(f"✅ Your private channel already exists: <#{existing.id}>", ephemeral=True)
+                await existing.send(
+                    f"👋 Welcome back, **{user.display_name}**! "
+                    f"Your profile has been updated. Ready to log your health journey!"
+                )
                 return
 
             # Create private channel with specific permissions
@@ -591,6 +576,7 @@ class PostOnboardingView(ui.View):
                 guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True),
                 user: discord.PermissionOverwrite(read_messages=True, send_messages=True)
             }
+
 
             # Try to find or create a "Health Channels" category
             category = discord.utils.get(guild.categories, name="Health Channels")
@@ -604,6 +590,8 @@ class PostOnboardingView(ui.View):
                     logger.warning(f"Could not create category: {cat_err}")
                     category = None
 
+
+
             # Create the private channel
             private_channel = await guild.create_text_channel(
                 channel_name,
@@ -613,7 +601,9 @@ class PostOnboardingView(ui.View):
                 reason=f"Private health channel for {user.display_name}"
             )
 
+
             logger.info(f"Created private channel {private_channel.name} for user {user.id}")
+
 
             # Send welcome message to private channel
             welcome_embed = discord.Embed(
@@ -625,6 +615,7 @@ class PostOnboardingView(ui.View):
                 color=discord.Color.green()
             )
 
+
             welcome_embed.add_field(
                 name="📸 Log a Meal",
                 value="Just send a photo of your food here!\nI'll analyze the calories and nutrition.",
@@ -632,7 +623,7 @@ class PostOnboardingView(ui.View):
             )
             welcome_embed.add_field(
                 name="🏃 Log a Workout",
-                value="Type something like:\n`I did 30 minutes of yoga` or `went for a run`.",
+                value="Type something like:\n`I did 30 minutes of yoga`\n`or\n`went for a run`",
                 inline=False
             )
             welcome_embed.add_field(
@@ -640,19 +631,31 @@ class PostOnboardingView(ui.View):
                 value="`/trends` - View your health analytics\n`/profile` - See your stats",
                 inline=False
             )
+            welcome_embed.add_field(
+                name="⚙️ Settings",
+                value="`/settings` - Manage your preferences\n`/help` - Full command list",
+                inline=False
+            )
+
+
             welcome_embed.set_footer(text="🔒 This channel is private - only you can see it")
 
+
             await private_channel.send(embed=welcome_embed)
+
 
             # Store channel ID in user preferences
             from src.discord_bot.profile_db import get_profile_db
             db = get_profile_db()
-            profile = pu.get_user_profile(self.user_id) or {}
-            prefs = profile.get("preferences_json", {})
+            prefs = self.profile_buffer.get("preferences_json", {})
             prefs["private_channel_id"] = str(private_channel.id)
             db.update_profile(self.user_id, preferences_json=prefs)
 
-            # Notify user
+
+            logger.info(f"[Onboarding] Stored private channel ID for user {self.user_id}")
+
+
+            # Notify user in the original channel
             await interaction.followup.send(
                 f"🔒 **Private channel created!** Check out <#{private_channel.id}> for daily logging.",
                 ephemeral=True
@@ -667,7 +670,8 @@ class PostOnboardingView(ui.View):
         except Exception as e:
             logger.error(f"Error creating private channel: {e}")
             await interaction.followup.send(
-                "⚠️ Could not create private channel. Use DMs for private health logging.",
+                "⚠️ Could not create private channel, but your profile is saved! "
+                "Use DMs for private health logging.",
                 ephemeral=True
             )
 class SettingsView(discord.ui.View):
@@ -1138,107 +1142,3 @@ class MealLogView(discord.ui.View):
         await interaction.response.send_message("🗑️ Removed from your daily total.", ephemeral=True)
         await self._refresh_message_embed(interaction)
         await self.bot._send_daily_summary_embed(interaction.channel, self.user_id)
-
-
-# ==================== v7.0 Proactive Nudging ====================
-
-class ProactiveNudgeView(ui.View):
-    """
-    Feedback buttons for proactive workout reminders (v7.0).
-
-    Allows users to respond to proactive nudges with:
-    - "太累了" (Tired) - Record as skipped due to fatigue
-    - "还行" (Okay) - Neutral response
-    - "很舒服" (Good) - Positive feedback
-    - "现在开始" (Start Now) - Initiate workout logging
-    """
-
-    def __init__(self, user_id: str, exercise_name: str):
-        super().__init__(timeout=3600)  # 1 hour timeout
-        self.user_id = user_id
-        self.exercise_name = exercise_name
-
-    async def _record_feedback(self, interaction: discord.Interaction, feedback_type: str):
-        """Record user feedback to the nudge."""
-        if str(interaction.user.id) != str(self.user_id):
-            return await interaction.response.send_message(
-                "This reminder is for someone else.",
-                ephemeral=True
-            )
-
-        try:
-            # Store feedback in workout_logs metadata
-            if pu.profile_db:
-                feedback_record = {
-                    "type": "proactive_nudge_feedback",
-                    "exercise_name": self.exercise_name,
-                    "feedback": feedback_type,
-                    "timestamp": datetime.utcnow().isoformat(),
-                }
-                # Store as a special log entry for analytics
-                pu.profile_db.log_workout(
-                    user_id=self.user_id,
-                    exercise_name=f"[feedback] {self.exercise_name}",
-                    duration_min=0,
-                    calories=0,
-                    metadata=feedback_record,
-                )
-
-            logger.info(f"Recorded nudge feedback: {feedback_type} for {self.exercise_name}")
-
-            # Respond based on feedback type
-            responses = {
-                "tired": "Rest is important too! You can try again tomorrow 😊",
-                "okay": "Got it! Let me know if you need anything!",
-                "good": "Awesome! Keep up the great work! 💪",
-            }
-
-            await interaction.response.send_message(
-                responses.get(feedback_type, "Thanks for your feedback!"),
-                ephemeral=True
-            )
-
-        except Exception as e:
-            logger.error(f"Error recording nudge feedback: {e}")
-            await interaction.response.send_message(
-                "Failed to record feedback, but that's okay!",
-                ephemeral=True
-            )
-
-    async def _initiate_workout(self, interaction: discord.Interaction):
-        """Help user start logging the workout."""
-        if str(interaction.user.id) != str(self.user_id):
-            return await interaction.response.send_message(
-                "This reminder is for someone else.",
-                ephemeral=True
-            )
-
-        # Send a workout logging prompt
-        embed = discord.Embed(
-            title=f"🏃 {self.exercise_name} Time!",
-            description=(
-                f"Great! Start your {self.exercise_name} now!\n\n"
-                f"After you finish, tell me how long you exercised and I'll log the calories burned."
-            ),
-            color=discord.Color.green(),
-            timestamp=datetime.utcnow(),
-        )
-        embed.set_footer(text="Reply with: /log workout [duration] minutes")
-
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
-    @discord.ui.button(label="Too Tired", style=discord.ButtonStyle.red, emoji="😫")
-    async def feedback_tired(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._record_feedback(interaction, "tired")
-
-    @discord.ui.button(label="Maybe Later", style=discord.ButtonStyle.gray, emoji="😐")
-    async def feedback_okay(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._record_feedback(interaction, "okay")
-
-    @discord.ui.button(label="Feeling Good!", style=discord.ButtonStyle.green, emoji="😊")
-    async def feedback_good(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._record_feedback(interaction, "good")
-
-    @discord.ui.button(label="Start Now", style=discord.ButtonStyle.blurple, emoji="🏃")
-    async def start_now(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._initiate_workout(interaction)

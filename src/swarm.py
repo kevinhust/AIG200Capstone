@@ -20,6 +20,10 @@ def handoff_to_fitness() -> str:
     """Signal to handoff to the Fitness Agent."""
     return "transfer_to_fitness"
 
+def handoff_to_repcount() -> str:
+    """Signal to handoff to the RepCount Agent."""
+    return "transfer_to_repcount"
+
 class HealthSwarm:
     def __init__(self, verbose: bool = True):
         self.verbose = verbose
@@ -65,6 +69,18 @@ class HealthSwarm:
             agent = FitnessAgent()
             response = await agent.execute_async(user_input, [{"type": "user_context", "content": json.dumps(user_context or {})}])
             return {"response": response, "agent": "fitness"}
+
+        if lower_input.startswith("transfer_to_repcount"):
+            from src.agents.repcount.repcount_agent import RepCountAgent
+            logger.info("Swarm Handoff: Force Routing to RepCount")
+            agent = RepCountAgent()
+            ctx = [{"type": "user_context", "content": json.dumps(user_context or {})}]
+            if user_context and "video_path" in user_context:
+                ctx.append({"type": "video_path", "content": user_context["video_path"]})
+            if user_context and "exercise" in user_context:
+                ctx.append({"type": "exercise", "content": user_context["exercise"]})
+            response = await agent.execute_async(user_input, ctx)
+            return {"response": response, "agent": "repcount"}
 
         # 2. Collaborative Delegation via RouterAgent
         delegations = self.router.analyze_and_delegate(user_input)

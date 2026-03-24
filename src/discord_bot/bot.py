@@ -25,7 +25,6 @@ from src.discord_bot.profile_db import get_profile_db
 from src.discord_bot import profile_utils as pu
 from src.discord_bot import intent_parser as ip
 from src.discord_bot import commands as cmd
-from src.scheduler import detect_time_windows, get_current_matching_windows
 from typing import Optional, List, Dict, Any
 from aiohttp import web
 
@@ -80,15 +79,7 @@ class HealthButlerDiscordBot(Client):
             self.morning_checkin.start()
         if not self.nightly_summary.is_running():
             self.nightly_summary.start()
-        if not self.pre_meal_reminder.is_running():
-            self.pre_meal_reminder.start()
-
-        # v7.0: Start proactive nudging loops
-        if not self.proactive_workout_nudge.is_running():
-            self.proactive_workout_nudge.start()
-        if not self.refresh_time_windows.is_running():
-            self.refresh_time_windows.start()
-
+        
         # Start health check server within the loop
         asyncio.create_task(self._start_health_server())
 
@@ -201,173 +192,15 @@ class HealthButlerDiscordBot(Client):
                     ),
                     color=discord.Color.green()
                 )
-                from src.discord_bot.roulette_view import MealInspirationView
+                from src.discord_bot.views import MealInspirationView
                 view = MealInspirationView(user_id, remaining)
                 await self._send_proactive_message(user_id, embed, view=view)
             except Exception as e:
                 logger.error(f"Error in pre_meal_reminder for {user_id}: {e}")
 
-    # ==================== v7.0 Proactive Nudging ====================
-
-    @tasks.loop(time=[time(h, 0, tzinfo=pu.LOCAL_TZ) for h in range(7, 23)])
-    async def proactive_workout_nudge(self):
-        """
-        Proactive workout reminders based on detected time patterns (v7.0).
-
-        Runs hourly from 7:00 to 22:00, checking if any user's detected
-        time window matches the current hour bucket.
-        """
-        logger.info("🏃 Running proactive workout nudge check...")
-
-        # Track which users received nudges today (one per user per day max)
-        today_str = datetime.now(pu.LOCAL_TZ).strftime("%Y-%m-%d")
-
-        for user_id in list(pu._user_profiles_cache.keys()):
-            try:
-                # Check if already nudged today
-                nudged_today = pu.get_user_nudge_status(user_id, today_str)
-                if nudged_today:
-                    continue
-
-                # Get user's time windows
-                time_windows = pu.get_user_time_windows(user_id)
-                if not time_windows:
-                    continue
-
-                # Find matching windows for current time
-                matching = get_current_matching_windows(
-                    time_windows,
-                    timezone=pu.LOCAL_TZ
-                )
-
-                if not matching:
-                    continue
-
-                # Get the highest confidence match
-                best_match = matching[0]
-                window_dict = best_match.to_dict()
-
-                # Get user profile and budget progress
-                profile = pu.get_user_profile(user_id)
-                user_name = profile.get("name", "there")
-
-                # Get budget progress if available
-                budget_progress = None
-                if pu.profile_db:
-                    try:
-                        stats = pu.profile_db.get_today_stats(user_id)
-                        target = pu.calculate_daily_target(profile)
-                        consumed = stats.get("total_calories", 0)
-                        remaining = max(0, target - consumed)
-                        remaining_pct = (remaining / target * 100) if target > 0 else 100
-
-                        status = "good"
-                        if remaining_pct < 20:
-                            status = "critical"
-                        elif remaining_pct < 40:
-                            status = "warning"
-
-                        budget_progress = {
-                            "remaining": remaining,
-                            "remaining_pct": remaining_pct,
-                            "consumed": consumed,
-                            "target": target,
-                            "status": status,
-                            "status_emoji": {"good": "🟢", "warning": "🟡", "critical": "🔴"}.get(status, "🟢"),
-                            "calorie_bar": HealthButlerEmbed.render_budget_progress_bar(
-                                (consumed / target * 100) if target > 0 else 0, remaining_pct
-                            ),
-                        }
-                    except Exception as e:
-                        logger.warning(f"Failed to get budget progress for {user_id}: {e}")
-
-                # v7.1: Get exercise image URL and MET info from RAG cache
-                exercise_image_url = None
-                met_value = None
-                intensity = None
-
-                try:
-                    # Search for exercise in RAG cache
-                    for ex in self.rag.exercises:
-                        if ex.get("name", "").lower() == best_match.exercise_name.lower():
-                            exercise_image_url = ex.get("image_url")
-                            met_value = ex.get("met_value")
-                            intensity = ex.get("intensity")
-                            break
-                except Exception as e:
-                    logger.debug(f"Could not get exercise image for {best_match.exercise_name}: {e}")
-
-                # Build the nudge embed with image and MET info (v7.1)
-                embed = HealthButlerEmbed.build_proactive_nudge_embed(
-                    user_name=user_name,
-                    exercise_name=best_match.exercise_name,
-                    time_window=window_dict,
-                    budget_progress=budget_progress,
-                    image_url=exercise_image_url,
-                    met_value=met_value,
-                    intensity=intensity,
-                )
-
-                # Create feedback view
-                from src.discord_bot.views import ProactiveNudgeView
-                view = ProactiveNudgeView(user_id, best_match.exercise_name)
-
-                # Send the nudge
-                await self._send_proactive_message(user_id, embed, view=view)
-
-                # Mark as nudged today
-                pu.set_user_nudge_status(user_id, today_str, True)
-
-                logger.info(f"✅ Sent proactive nudge to {user_name} for {best_match.exercise_name}")
-
-            except Exception as e:
-                logger.error(f"Error in proactive_workout_nudge for {user_id}: {e}")
-
-    @tasks.loop(time=time(6, 0, tzinfo=pu.LOCAL_TZ))
-    async def refresh_time_windows(self):
-        """
-        Refresh time window detections for all users (v7.0).
-
-        Runs daily at 6:00 AM to update pattern detections based on
-        the latest workout logs.
-        """
-        logger.info("🔄 Refreshing time window detections for all users...")
-
-        for user_id in list(pu._user_profiles_cache.keys()):
-            try:
-                # Fetch workout logs from the past 14 days
-                if not pu.profile_db:
-                    continue
-
-                workout_logs = pu.profile_db.get_workout_logs(
-                    user_id,
-                    days=14
-                )
-
-                if not workout_logs:
-                    continue
-
-                # Detect time windows
-                windows = detect_time_windows(
-                    workout_logs,
-                    min_frequency=2,
-                    days_back=14,
-                    timezone=pu.LOCAL_TZ,
-                )
-
-                # Cache the windows
-                pu.set_user_time_windows(user_id, windows)
-
-                logger.info(f"✅ Refreshed {len(windows)} time windows for user {user_id}")
-
-            except Exception as e:
-                logger.error(f"Error refreshing time windows for {user_id}: {e}")
-
     @morning_checkin.before_loop
     @nightly_summary.before_loop
     @pre_meal_reminder.before_loop
-    @proactive_workout_nudge.before_loop
-    @refresh_time_windows.before_loop
     async def before_loops(self):
         await self.wait_until_ready()
 
@@ -417,6 +250,51 @@ class HealthButlerDiscordBot(Client):
             await cmd.handle_reset_command(message, HealthButlerEmbed, OnboardingGreetingView)
             return
 
+        if content_lower.startswith("/repcount"):
+            args = content_lower.replace("/repcount", "").strip()
+            exercise = args if args else "squat"
+            video_attachment = next((a for a in message.attachments if a.content_type and a.content_type.startswith('video/')), None)
+            
+            if not video_attachment:
+                await message.reply("⚠️ Please attach a workout video to use `/repcount`.")
+                return
+                
+            async with message.channel.typing():
+                video_path = f"/tmp/{video_attachment.filename}"
+                await video_attachment.save(video_path)
+                status_msg = await message.channel.send(f"🏋️ *Analyzing {exercise} video... Please wait.*")
+                
+                try:
+                    user_context = {
+                        "video_path": video_path,
+                        "exercise": exercise
+                    }
+                    result = await self.swarm.execute_async(
+                        user_input="transfer_to_repcount", 
+                        user_context=user_context
+                    )
+                    
+                    stats = json.loads(result.get("response", "{}"))
+                    if "error" in stats:
+                        await status_msg.edit(content=f"❌ Error: {stats['error']}")
+                    else:
+                        embed = discord.Embed(
+                            title="📊 RepCount Analysis",
+                            color=discord.Color.blue()
+                        )
+                        embed.add_field(name="Exercise", value=stats.get('exercise', '').title(), inline=True)
+                        embed.add_field(name="Reps Counted", value=str(stats.get('rep_count', 0)), inline=True)
+                        embed.add_field(name="Video Duration", value=f"{stats.get('video_duration_sec')}s", inline=True)
+                        embed.set_footer(text="Powered by MediaPipe Pose")
+                        await status_msg.edit(content="", embed=embed)
+                except Exception as e:
+                    logger.error(f"RepCount Error: {e}")
+                    await status_msg.edit(content=f"⚠️ Error processing video: {str(e)}")
+                finally:
+                    if os.path.exists(video_path):
+                        os.remove(video_path)
+            return
+
         # Phase 6.1/6.2: Premium "Cold Start" Onboarding Hook
         greetings = ["hi", "hello", "你好", "start", "hey", "👋"]
         if content_lower in greetings or content_lower == "/setup":
@@ -457,16 +335,6 @@ class HealthButlerDiscordBot(Client):
 
         if message.content.strip().lower() == "/help":
             await cmd.handle_help_command(message, HealthButlerEmbed)
-            return
-
-        # v7.1: Test command for visualizing proactive nudge with exercise image
-        if message.content.strip().lower().startswith("/test_nudge"):
-            from src.discord_bot.views import ProactiveNudgeView
-            parts = message.content.strip().split(maxsplit=1)
-            exercise_name = parts[1] if len(parts) > 1 else None
-            await cmd.handle_test_nudge_command(
-                message, HealthButlerEmbed, ProactiveNudgeView, exercise_name
-            )
             return
 
         # Phase 8: Sensitive Query Redirection
@@ -562,7 +430,7 @@ class HealthButlerDiscordBot(Client):
             return
 
         if message.content.strip().lower().startswith("!settings"):
-            await cmd.handle_settings_command(message)
+            await self._handle_settings_command(message)
             return
 
         if message.content.strip().lower() in ("/exit", "/quit"):
@@ -730,7 +598,6 @@ class HealthButlerDiscordBot(Client):
                         user_habits=user_habits
                     )
                     await self._persist_fitness_plan(data, interaction_user_id)
-                    from src.discord_bot.views import LogWorkoutView
                     await channel.send(embed=embed, view=LogWorkoutView(self, data, interaction_user_id))
                 else:
                     # Fallback for other specialist agents or generic JSON

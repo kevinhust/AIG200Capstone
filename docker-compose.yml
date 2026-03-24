@@ -23,7 +23,6 @@ services:
       - "8085:8080"
     volumes:
       - health-butler-data:/app/data
-      - ./src:/app/src
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()" ]

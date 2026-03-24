@@ -1,42 +1,11 @@
 import logging
 import discord
-import random
-import json
-import os
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from src.discord_bot import profile_utils as pu
 from src.discord_bot.modals import RegistrationModal
 from src.discord_bot.views import RegistrationViewA, StartSetupView
 
 logger = logging.getLogger(__name__)
-
-# Cache for exercises with images
-_exercises_with_images: Optional[List[Dict]] = None
-
-def _load_exercises_with_images() -> List[Dict]:
-    """Load exercises that have image URLs from cache."""
-    global _exercises_with_images
-    if _exercises_with_images is not None:
-        return _exercises_with_images
-
-    # Try multiple possible paths (Docker container vs local development)
-    possible_paths = [
-        "/app/data/rag/exercise_cache.json",  # Docker container
-        "data/rag/exercise_cache.json",        # Local development
-        os.path.join(os.path.dirname(__file__), "..", "..", "data", "rag", "exercise_cache.json"),
-    ]
-
-    for cache_path in possible_paths:
-        if os.path.exists(cache_path):
-            with open(cache_path, 'r', encoding='utf-8') as f:
-                cache_data = json.load(f)
-                all_exercises = cache_data.get('data', [])
-                _exercises_with_images = [ex for ex in all_exercises if ex.get('image_url')]
-                logger.info(f"📦 Loaded {len(_exercises_with_images)} exercises with images from {cache_path}")
-                return _exercises_with_images
-
-    logger.warning(f"⚠️ Exercise cache not found. Tried: {possible_paths}")
-    return []
 
 async def _on_registration_modal_submit(interaction: discord.Interaction, data: Dict[str, Any], HealthButlerEmbed):
     """Callback for v4.1 simplified RegistrationModal (Step 1/3)"""
@@ -79,21 +48,13 @@ async def handle_reset_command(message: discord.Message, HealthButlerEmbed, Onbo
     
     # 1. Clear DB
     db = pu.profile_db
-    deleted = False
-    if db is not None:
-        deleted = db.delete_profile(author_id)
+    deleted = db.delete_profile(author_id)
     
     # 2. Clear Local Cache
-    cache_cleared = False
     if author_id in pu._user_profiles_cache:
         del pu._user_profiles_cache[author_id]
-        cache_cleared = True
-    if author_id in pu._demo_user_profile:
-        del pu._demo_user_profile[author_id]
-        cache_cleared = True
     
-    # Consider success if either DB deletion succeeded, cache was cleared, or DB is not configured (demo mode).
-    if deleted or cache_cleared or db is None:
+    if deleted:
         embed = HealthButlerEmbed.welcome_embed(message.author.display_name)
         embed.title = "♻️ Profile Reset Successful"
         embed.description = "Your health profile has been completely cleared. You can start fresh whenever you're ready!\n\nClick the button below to begin your new journey."
@@ -108,7 +69,6 @@ async def handle_reset_command(message: discord.Message, HealthButlerEmbed, Onbo
         )
         await message.reply(embed=embed, view=view)
     else:
-        # DB deletion failed, and there was no cache to clear
         await message.reply("❌ Failed to reset profile. Please try again later or contact support.")
 
 async def handle_settings_command(message: discord.Message):
@@ -218,7 +178,6 @@ async def handle_help_command(message: discord.Message, HealthButlerEmbed):
         value=(
             "`/trends` - View your 30-day health analytics.\n"
             "`/roulette` - Spin for meal inspiration 🎰.\n"
-            "`/test_nudge [exercise]` - Preview a visual workout reminder (v7.1).\n"
             "`/settings` - Manage notifications."
         ),
         inline=False
@@ -236,91 +195,3 @@ async def handle_help_command(message: discord.Message, HealthButlerEmbed):
     
     embed.set_footer(text="Health Butler v7.0 | Clean Architecture")
     await message.reply(embed=embed)
-
-async def handle_test_nudge_command(
-    message: discord.Message,
-    HealthButlerEmbed,
-    ProactiveNudgeView,
-    exercise_name: Optional[str] = None
-):
-    """
-    🧪 Test command for visualizing a proactive nudge with exercise image.
-
-    Usage:
-        /test_nudge          - Random exercise with image
-        /test_nudge Yoga     - Specific exercise (if available)
-    """
-    exercises = _load_exercises_with_images()
-
-    if not exercises:
-        await message.reply("❌ No exercises with images available in cache.")
-        return
-
-    # Find exercise by name or pick random
-    selected = None
-    if exercise_name:
-        # Case-insensitive search among exercises with images
-        for ex in exercises:
-            if exercise_name.lower() in ex.get('name', '').lower():
-                selected = ex
-                break
-
-        if not selected:
-            # No match with image - notify user and pick random
-            await message.reply(
-                f"⚠️ No exercise matching '**{exercise_name}**' has an image. Showing a random exercise instead:"
-            )
-            selected = random.choice(exercises)
-    else:
-        selected = random.choice(exercises)
-
-    # Extract exercise data
-    name = selected.get('name', 'Exercise')
-    image_url = selected.get('image_url')
-    met_value = selected.get('met_value', 3.5)
-    intensity = selected.get('intensity', 'moderate')
-    equipment = selected.get('equipment_type', 'bodyweight')
-
-    # Build mock time window and budget for demo
-    mock_time_window = {
-        "day_name": "Tuesday",
-        "hour_bucket": "evening",
-        "confidence": 0.85,
-        "frequency": 5
-    }
-
-    mock_budget = {
-        "remaining": 350,
-        "remaining_pct": 65,
-        "status": "good",
-        "status_emoji": "🟢",
-        "calorie_bar": "🟢 `[██████░░░░] 65%`"
-    }
-
-    # Build the nudge embed with v7.1 visual enhancement
-    embed = HealthButlerEmbed.build_proactive_nudge_embed(
-        user_name=message.author.display_name,
-        exercise_name=name,
-        time_window=mock_time_window,
-        budget_progress=mock_budget,
-        empathy_strategy=None,
-        image_url=image_url,
-        met_value=met_value,
-        intensity=intensity
-    )
-
-    # Add equipment info as extra context
-    embed.add_field(
-        name="📋 Exercise Details",
-        value=f"**Equipment**: {equipment.title()}\n**Cache ID**: {selected.get('id', 'N/A')}",
-        inline=False
-    )
-
-    # Create view with feedback buttons
-    view = ProactiveNudgeView(
-        user_id=str(message.author.id),
-        exercise_name=name
-    )
-
-    await message.reply(embed=embed, view=view)
-    logger.info(f"🧪 Test nudge sent: {name} (MET: {met_value}, Image: {bool(image_url)})")

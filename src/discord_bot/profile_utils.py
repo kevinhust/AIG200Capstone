@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from zoneinfo import ZoneInfo
 from src.discord_bot.profile_db import ProfileDB
 
@@ -22,10 +22,6 @@ profile_db: Optional[ProfileDB] = None
 
 # In-memory cache for user profiles (synced with Supabase)
 _user_profiles_cache: Dict[str, Dict[str, Any]] = {}  # user_id -> profile
-
-# v7.0: Time window cache for proactive nudging
-_user_time_windows: Dict[str, List[Any]] = {}  # user_id -> List[TimeWindow]
-_user_nudge_status: Dict[str, Dict[str, bool]] = {}  # user_id -> {date_str: nudged}
 
 def set_profile_db(db: ProfileDB):
     global profile_db
@@ -216,60 +212,3 @@ def _parse_int_set(env_val: Optional[str]) -> set[int]:
 
 def save_demo_profile(user_id: str, profile: Dict[str, Any]) -> bool:
     return save_user_profile(user_id, profile)
-
-
-# ==================== v7.0 Proactive Nudging Helpers ====================
-
-def get_user_time_windows(user_id: str) -> List[Any]:
-    """Get cached time windows for a user."""
-    return _user_time_windows.get(user_id, [])
-
-
-def set_user_time_windows(user_id: str, windows: List[Any]) -> None:
-    """Cache time windows for a user."""
-    global _user_time_windows
-    _user_time_windows[user_id] = windows
-    logger.info(f"Cached {len(windows)} time windows for user {user_id}")
-
-
-def get_user_nudge_status(user_id: str, date_str: str) -> bool:
-    """
-    Check if user was already nudged on a specific date.
-
-    Args:
-        user_id: User's Discord ID
-        date_str: Date string in YYYY-MM-DD format
-
-    Returns:
-        True if user was nudged today, False otherwise
-    """
-    user_status = _user_nudge_status.get(user_id, {})
-    return user_status.get(date_str, False)
-
-
-def set_user_nudge_status(user_id: str, date_str: str, nudged: bool) -> None:
-    """
-    Set the nudge status for a user on a specific date.
-
-    Args:
-        user_id: User's Discord ID
-        date_str: Date string in YYYY-MM-DD format
-        nudged: Whether the user was nudged
-    """
-    global _user_nudge_status
-    if user_id not in _user_nudge_status:
-        _user_nudge_status[user_id] = {}
-    _user_nudge_status[user_id][date_str] = nudged
-
-
-def clear_user_time_windows(user_id: str) -> None:
-    """Clear cached time windows for a user."""
-    global _user_time_windows
-    if user_id in _user_time_windows:
-        del _user_time_windows[user_id]
-
-
-def clear_all_time_windows() -> None:
-    """Clear all cached time windows."""
-    global _user_time_windows
-    _user_time_windows = {}
