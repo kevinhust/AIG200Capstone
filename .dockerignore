@@ -39,9 +39,9 @@ archive/
 *.tmp
 *.log
 
-# Large data files (models should be downloaded at runtime)
-models/
-/data/
+# Large data files (should be downloaded at runtime if they are huge)
+# models/
+# /data/
 /datasets/
 /resources/
 # Only exclude top-level data/, not health_butler/data/ or health_butler/data_rag/
