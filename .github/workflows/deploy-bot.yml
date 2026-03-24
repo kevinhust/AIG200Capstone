@@ -2,9 +2,8 @@ name: Deploy Discord Bot to Cloud Run
 
 on:
   push:
-    branches: [main]
+    branches: [main, Kevin]
     paths:
-      - health_butler/**
       - src/**
       - requirements_deploy.txt
       - Dockerfile
