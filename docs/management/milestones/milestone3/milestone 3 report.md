@@ -9,8 +9,6 @@ Since Milestone 2, the **Personal Health Butler AI** has evolved from a function
 - **Safety-first fitness recommendations** (BR-001 Safety Shield)
 - **Full cloud deployment readiness** (Dockerfile, Cloud Run compatible)
 - **Comprehensive test coverage** (87 passing tests, 10 skipped integration tests)
-- **Robust Persistence & Privacy** (Supabase RLS, Automatic isolated Discord private channels)
-- **Engaging UI/UX** (Interactive onboarding, physics-based "Food Roulette", Full i18n support)
 
 ## 2. Core Model Development & Evaluation (6 points)
 
@@ -118,24 +116,7 @@ Output: Bilingual health context injection
 - Exercise recommendations in user's language
 ```
 
-### C. User Onboarding & Data Privacy
-
-**Flow & Features:**
-1. **Interactive Onboarding:** Streamlined new user guide triggering on greetings, capturing essential health data (Age, BMI inputs) via Discord Modals.
-2. **Private Channels:** Automatic creation of isolated text channels (e.g., `health-user123`) with strict permission overrides to protect sensitive health telemetry from public view.
-3. **Medical Disclaimer:** Enforced Terms of Service acceptance and explicit "Not medical advice" disclaimers before logging data.
-
-### D. Gamification & Advanced Features
-
-**Interactive UI:**
-- **Food Roulette (Module 14):** A budget-aware meal suggestion mini-game with physics-based slot-machine braking animations and rolling emojis for high engagement.
-- **wger.de Integration:** Over 800 exercise images dynamically cached and fetched to provide rich visual representations of workout recommendations.
-
-**Internationalization (i18n):**
-- A scalable `I18N` utility class providing dynamic localization (EN/CN default and fallback chains).
-- User language preferences are stored directly in their Supabase profile and seamlessly injected into the agent task contexts.
-
-### E. Integration Challenges Solved
+### C. Integration Challenges Solved
 
 | Challenge | Solution |
 |-----------|----------|
@@ -214,9 +195,6 @@ services:
 | Premium UI (wger API) | ✅ Complete | 800+ exercise cache |
 | Dockerfile | ✅ Complete | Multi-stage, Cloud Run ready |
 | Cloud Deployment | 🔄 In Progress | Cloud Run planned |
-| Bot Architecture Refactor | ✅ Complete | Decoupled into 10+ specific modules |
-| Private Onboarding Flow | ✅ Complete | Automatic isolated Discord channels |
-| Robust Persistence Layer | ✅ Complete | Supabase DB with automated RLS |
 
 ### B. Next 3 Weeks Plan (Milestone 4)
 
@@ -276,14 +254,6 @@ class HealthMemo(TypedDict):
 pu.profile_db = mock_db  # Not discord_bot.profile_db
 ```
 
-**Challenge 5: Database Schema Evolution**
-- **Problem:** Updating user profiles on older database instances lacking new JSON preference columns caused crashes.
-- **Solution:** Implemented robust schema fallbacks to automatically execute queries without `preferences_json` when column errors occur.
-
-**Challenge 6: Monolithic Codebase Maintenance**
-- **Problem:** The central `bot.py` script grew to 1500+ lines, reducing developer velocity.
-- **Solution:** Complete architectural decoupling into 10+ domain-specific modules (e.g., `intent_parser.py`, `profile_utils.py`, `roulette_view.py`).
-
 ### B. Architecture Decisions
 
 | Decision | Rationale |
@@ -292,8 +262,6 @@ pu.profile_db = mock_db  # Not discord_bot.profile_db
 | Gemini over GPT-4 Vision | Cost-effective, fast, structured output support |
 | Supabase over Firebase | PostgreSQL + RLS for complex health data relationships |
 | Docker + Cloud Run | Serverless scaling, pay-per-use, minimal ops overhead |
-| Modular Discord Components | Clean separation of UI (`views.py`), state (`profile_utils.py`), and events |
-| Database RLS Policies | Row-Level Security ensures users can only access their own profiles and logs |
 
 ### C. Code Quality Metrics
 
