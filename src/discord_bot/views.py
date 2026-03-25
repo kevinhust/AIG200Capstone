@@ -1142,3 +1142,145 @@ class MealLogView(discord.ui.View):
         await interaction.response.send_message("🗑️ Removed from your daily total.", ephemeral=True)
         await self._refresh_message_embed(interaction)
         await self.bot._send_daily_summary_embed(interaction.channel, self.user_id)
+
+
+# ============================================================
+# Multiplayer Settings UI (BYOK + Weekly Split)
+# ============================================================
+
+_GYM_TARGETS: List[discord.SelectOption] = [
+    discord.SelectOption(label="Chest", value="chest", emoji="💪"),
+    discord.SelectOption(label="Back", value="back", emoji="🔙"),
+    discord.SelectOption(label="Legs", value="legs", emoji="🦵"),
+    discord.SelectOption(label="Shoulders", value="shoulders", emoji="🏋️"),
+    discord.SelectOption(label="Arms (Biceps & Triceps)", value="arms", emoji="💪"),
+    discord.SelectOption(label="Abs / Core", value="abs", emoji="🧱"),
+    discord.SelectOption(label="Cardio", value="cardio", emoji="🏃"),
+    discord.SelectOption(label="Rest Day", value="rest", emoji="😴"),
+]
+
+_DAY_OPTIONS: List[discord.SelectOption] = [
+    discord.SelectOption(label=d.capitalize(), value=d)
+    for d in ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+]
+
+_DAYS_OF_WEEK = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+
+
+class _DaySelect(discord.ui.Select):
+    """Row 0: pick which day of the week to configure."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            placeholder="Step 1: Choose a day",
+            min_values=1,
+            max_values=1,
+            options=_DAY_OPTIONS,
+            row=0,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        chosen = self.values[0]
+        parent: SettingsView = self.view  # type: ignore[assignment]
+        parent.active_day = chosen
+        parent.muscle_select.placeholder = f"Step 2: Pick muscles for {chosen.capitalize()}"
+        parent.muscle_select.disabled = False
+        await interaction.response.edit_message(view=parent)
+
+
+class WeeklySplitSelect(discord.ui.Select):
+    """Row 1: multi-select muscle groups for the active day."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            placeholder="(pick a day first)",
+            min_values=1,
+            max_values=3,
+            options=_GYM_TARGETS,
+            disabled=True,
+            row=1,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        """Merge selected muscles into the user's weekly_split JSONB."""
+        parent: SettingsView = self.view  # type: ignore[assignment]
+        day = getattr(parent, "active_day", None)
+        if not day:
+            return await interaction.response.send_message(
+                "Pick a day first.", ephemeral=True,
+            )
+
+        user_id = str(interaction.user.id)
+        selected: List[str] = self.values
+
+        profile = pu.get_user_profile(user_id) or {}
+        current_split: Dict[str, Any] = profile.get("weekly_split") or {}
+        if not isinstance(current_split, dict):
+            current_split = {}
+
+        current_split[day] = selected
+
+        if pu.profile_db:
+            try:
+                pu.profile_db.update_weekly_split(user_id, current_split)
+            except Exception as exc:
+                logger.error("update_weekly_split failed for %s: %s", user_id, exc)
+                return await interaction.response.send_message(
+                    f"❌ Failed to save split: {exc}", ephemeral=True,
+                )
+
+        display = ", ".join(f"**{v.title()}**" for v in selected)
+        await interaction.response.send_message(
+            f"✅ **{day.capitalize()}** → {display}",
+            ephemeral=True,
+        )
+
+
+class SettingsView(discord.ui.View):
+    """Multiplayer settings dashboard (fits within Discord's 5-row limit).
+
+    Layout:
+        Row 0 - Day select (single)
+        Row 1 - Muscle-group select (multi, enabled after day is chosen)
+        Row 2 - BYOK button + View Split button
+    """
+
+    def __init__(self) -> None:
+        super().__init__(timeout=300)
+        self.active_day: Optional[str] = None
+        self.add_item(_DaySelect())
+        self.muscle_select = WeeklySplitSelect()
+        self.add_item(self.muscle_select)
+
+    @discord.ui.button(label="Configure Custom AI (BYOK)", style=discord.ButtonStyle.blurple, emoji="🔑", row=2)
+    async def open_byok_modal(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        """Open the BYOKModal for secure key entry."""
+        from src.discord_bot.modals import BYOKModal
+        await interaction.response.send_modal(BYOKModal(owner_type="user"))
+
+    @discord.ui.button(label="View Current Split", style=discord.ButtonStyle.gray, emoji="📅", row=2)
+    async def view_current_split(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        """Show the user's saved weekly split."""
+        user_id = str(interaction.user.id)
+        profile = pu.get_user_profile(user_id) or {}
+        split: Dict[str, Any] = profile.get("weekly_split") or {}
+
+        if not split or all(not v for v in split.values()):
+            return await interaction.response.send_message(
+                "You haven't set a weekly split yet. Use the dropdowns above.",
+                ephemeral=True,
+            )
+
+        lines: list[str] = []
+        for day in _DAYS_OF_WEEK:
+            muscles = split.get(day)
+            if isinstance(muscles, list) and muscles:
+                tags = ", ".join(m.title() for m in muscles)
+            else:
+                tags = "*not set*"
+            lines.append(f"**{day.capitalize()}**: {tags}")
+
+        await interaction.response.send_message(
+            "📅 **Your Weekly Split**\n" + "\n".join(lines),
+            ephemeral=True,
+        )

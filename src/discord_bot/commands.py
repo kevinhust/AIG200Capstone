@@ -3,7 +3,7 @@ import discord
 from typing import Dict, Any, Optional
 from src.discord_bot import profile_utils as pu
 from src.discord_bot.modals import RegistrationModal
-from src.discord_bot.views import RegistrationViewA, StartSetupView
+from src.discord_bot.views import RegistrationViewA, StartSetupView, SettingsView
 
 logger = logging.getLogger(__name__)
 
@@ -71,36 +71,74 @@ async def handle_reset_command(message: discord.Message, HealthButlerEmbed, Onbo
     else:
         await message.reply("❌ Failed to reset profile. Please try again later or contact support.")
 
-async def handle_settings_command(message: discord.Message):
-    """⚙️ Manages personalized engagement settings."""
+async def handle_settings_command(message: discord.Message) -> None:
+    """Show the Multiplayer Settings dashboard (BYOK + Weekly Split).
+
+    Sub-commands preserved for backwards compatibility:
+        /settings morning on|off   -- toggle morning check-in
+    """
     author_id = str(message.author.id)
     content = message.content.replace("/settings", "").strip().lower()
-    
-    # Fetch profile
-    profile = pu._user_profiles_cache.get(author_id) or pu.get_user_profile(author_id) or {}
-    prefs = profile.get("preferences_json", {})
-    
-    if not content:
-        status_ico = "✅ Enabled" if prefs.get("morning_checkin_enabled", True) else "❌ Disabled"
-        await message.reply(
-            f"⚙️ **Your Health Assistant Settings**\n"
-            f"• Morning Check-in: **{status_ico}**\n\n"
-            f"To toggle, use `/settings morning on` or `/settings morning off`."
-        )
-        return
 
+    # --- Sub-command: morning check-in toggle (legacy) ---
     if "morning" in content:
+        profile = pu._user_profiles_cache.get(author_id) or pu.get_user_profile(author_id) or {}
+        prefs = profile.get("preferences_json", {})
         new_val = "off" not in content
         prefs["morning_checkin_enabled"] = new_val
         if pu.profile_db:
             pu.profile_db.update_profile(author_id, preferences_json=prefs)
-        
-        # Update cache
         if author_id in pu._user_profiles_cache:
             pu._user_profiles_cache[author_id]["preferences_json"] = prefs
-        
         status_text = "enabled" if new_val else "disabled"
         await message.reply(f"✅ Morning Check-in successfully **{status_text}**.")
+        return
+
+    # --- Default: full settings dashboard ---
+    profile = pu.get_user_profile(author_id) or {}
+    split = profile.get("weekly_split") or {}
+    privacy = profile.get("privacy_level", "friends")
+    prefs = profile.get("preferences_json", {})
+    morning_status = "✅ On" if prefs.get("morning_checkin_enabled", True) else "❌ Off"
+
+    has_byok = False
+    if pu.profile_db:
+        try:
+            cfg = pu.profile_db.get_llm_config(owner_id=author_id, owner_type="user")
+            has_byok = cfg is not None
+        except Exception:
+            pass
+
+    embed = discord.Embed(
+        title="⚙️ Health Butler Settings",
+        description=(
+            "Configure your **weekly gym split** for matchmaking and optionally "
+            "plug in your own AI key (BYOK) for zero-cost inference."
+        ),
+        color=discord.Color.blurple(),
+    )
+
+    # Weekly Split summary
+    if split and any(split.values()):
+        days_of_week = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+        lines: list[str] = []
+        for day in days_of_week:
+            muscles = split.get(day)
+            if isinstance(muscles, list) and muscles:
+                lines.append(f"**{day[:3].capitalize()}**: {', '.join(m.title() for m in muscles)}")
+        split_text = "\n".join(lines) if lines else "*Not configured yet*"
+    else:
+        split_text = "*Not configured yet -- use the dropdowns below.*"
+
+    embed.add_field(name="📅 Weekly Gym Split", value=split_text, inline=False)
+    embed.add_field(name="🔑 Custom AI (BYOK)", value="✅ Active" if has_byok else "❌ Not set", inline=True)
+    embed.add_field(name="🔒 Privacy", value=f"`{privacy}`", inline=True)
+    embed.add_field(name="🌤️ Morning Check-in", value=morning_status, inline=True)
+
+    embed.set_footer(text="Use the dropdowns to set your split · BYOK button for AI keys · /settings morning on|off")
+
+    view = SettingsView()
+    await message.reply(embed=embed, view=view)
 
 async def handle_demo_command(message: discord.Message):
     """👋 Handle /demo command logic."""
