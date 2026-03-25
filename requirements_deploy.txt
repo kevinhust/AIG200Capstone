@@ -1,9 +1,10 @@
 # requirements_deploy.txt
 # Optimized for Google Cloud Run (Lite 300MB version)
 
-# Core Discord
+# Core Discord & Async
 discord.py==2.6.4
 aiohttp>=3.11.0
+nest-asyncio>=1.6.0
 
 # AI/ML Libraries (Lite - API Focused)
 google-genai>=1.62.0
@@ -13,8 +14,9 @@ rapidfuzz>=3.12.0
 mediapipe>=0.10.0
 numpy>=1.26.0
 
-# Data & Database
+# Data, Database & Config
 supabase==2.28.0
 pydantic>=2.10.0
 pydantic-settings>=2.7.0
 python-dotenv>=1.0.1
+requests>=2.32.0
