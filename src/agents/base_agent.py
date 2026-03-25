@@ -157,8 +157,9 @@ class BaseAgent:
         
         return result
     async def _call_openai_api_async(self, prompt: str) -> str:
-        """Asynchronous call to OpenAI-compatible API."""
+        """Asynchronous call to OpenAI-compatible API with retry logic."""
         import aiohttp
+        import asyncio
         base_url = self.api_config.get('base_url') or getattr(settings, 'OPENAI_BASE_URL', '').rstrip("/")
         api_key = self.api_config.get('api_key') or getattr(settings, 'OPENAI_API_KEY', '')
         model = self.api_config.get('model') or getattr(settings, 'OPENAI_MODEL', 'grok-2-latest')
@@ -184,32 +185,59 @@ class BaseAgent:
             "max_tokens": 4096
         }
         
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=payload, headers=headers, timeout=120) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-                    return content if content else str(data)
-        except Exception as e:
-            return f"[{self.role}] Error calling API ({model}): {e}"
+        max_retries = 3
+        for attempt in range(max_retries + 1):
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url, json=payload, headers=headers, timeout=120) as response:
+                        if response.status in [429, 500, 502, 503, 504] and attempt < max_retries:
+                            wait_time = (2 ** attempt) + 1
+                            logger.warning(f"[{self.role}] API Attempt {attempt+1} failed with status {response.status}. Retrying in {wait_time}s...")
+                            await asyncio.sleep(wait_time)
+                            continue
+                            
+                        response.raise_for_status()
+                        data = await response.json()
+                        content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                        return content if content else str(data)
+            except Exception as e:
+                if attempt < max_retries:
+                    wait_time = (2 ** attempt) + 1
+                    logger.warning(f"[{self.role}] API Attempt {attempt+1} failed with error: {e}. Retrying in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                    continue
+                return f"[{self.role}] Error calling API ({model}): {e}"
 
     async def _call_gemini_api_async(self, prompt: str) -> str:
-        """Asynchronous call to Google Gemini API."""
+        """Asynchronous call to Google Gemini API with retry logic."""
         if not self.client:
             return f"[{self.role}] Error: Gemini client not initialized"
+
+        import asyncio
+        max_retries = 3
         
-        try:
-            import asyncio
-            # Wrap synchronous generate_content in a thread to keep it async-friendly
-            response = await asyncio.to_thread(
-                self.client.models.generate_content,
-                model=settings.GEMINI_MODEL_NAME,
-                contents=prompt
-            )
-            return getattr(response, "text", str(response)).strip()
-        except Exception as e:
-            return f"[{self.role}] Error executing task: {str(e)}"
+        for attempt in range(max_retries + 1):
+            try:
+                # Wrap synchronous generate_content in a thread to keep it async-friendly
+                response = await asyncio.to_thread(
+                    self.client.models.generate_content,
+                    model=settings.GEMINI_MODEL_NAME,
+                    contents=prompt
+                )
+                return getattr(response, "text", str(response)).strip()
+            except Exception as e:
+                error_msg = str(e)
+                # Retry on transient errors: 503 (Unavailable), 500 (Internal), 429 (Rate Limit)
+                is_transient = any(code in error_msg for code in ["503", "500", "429", "UNAVAILABLE", "ResourceExhausted"])
+                
+                if is_transient and attempt < max_retries:
+                    wait_time = (2 ** attempt) + 1  # 2s, 3s, 5s...
+                    logger.warning(f"[{self.role}] API Attempt {attempt+1} failed ({error_msg}). Retrying in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                    continue
+                
+                logger.error(f"[{self.role}] API Final failure after {attempt+1} attempts: {error_msg}")
+                return f"[{self.role}] Error executing task: {error_msg}\n(Quota might be exhausted)"
 
     async def execute_async(self, task: str, context: Optional[List[Dict[str, str]]] = None) -> str:
         """Asynchronously execute a task."""
