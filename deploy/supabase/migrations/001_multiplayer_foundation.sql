@@ -98,24 +98,23 @@ CREATE INDEX IF NOT EXISTS idx_user_llm_configs_active
 -- NOTE: Encryption is intentionally done via RPC functions to avoid shipping plaintext
 -- keys to clients. Your bot uses the Supabase service role key server-side.
 
+-- NOTE: Supabase installs pgcrypto into the `extensions` schema, so
+-- search_path must include it for pgp_sym_encrypt / pgp_sym_decrypt.
+
 CREATE OR REPLACE FUNCTION encrypt_api_key(plain_key TEXT, passphrase TEXT)
 RETURNS BYTEA
 LANGUAGE SQL
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
-  SELECT pgp_sym_encrypt(
-    plain_key,
-    passphrase,
-    'cipher-algo=aes256, compress-algo=1'
-  );
+  SELECT pgp_sym_encrypt(plain_key, passphrase);
 $$;
 
 CREATE OR REPLACE FUNCTION decrypt_api_key(encrypted_key BYTEA, passphrase TEXT)
 RETURNS TEXT
 LANGUAGE SQL
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
   SELECT pgp_sym_decrypt(encrypted_key, passphrase)::TEXT;
 $$;
@@ -140,7 +139,7 @@ RETURNS TABLE (
 )
 LANGUAGE SQL
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
   SELECT
     c.owner_id,
@@ -176,7 +175,7 @@ CREATE OR REPLACE FUNCTION upsert_user_llm_config(
 RETURNS user_llm_configs
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_encrypted BYTEA;
