@@ -130,18 +130,23 @@ jobs:
       - name: Verify deployment
         run: |
           echo "Waiting for service to be ready..."
-          sleep 45
+          sleep 20
           HEALTH_URL="${{ steps.service-url.outputs.service-url }}/health"
-          echo "Checking health at: $HEALTH_URL"
-          for i in $(seq 1 12); do
-            if curl -sf "$HEALTH_URL" > /dev/null; then
-              echo "Health check passed!"
+          echo "Checking health at: $HEALTH_URL (with Auth)"
+          
+          # Use gcloud to get an identity token for the private service
+          ID_TOKEN=$(gcloud auth print-identity-token)
+          
+          for i in $(seq 1 10); do
+            # Added Authorization header to fix False Negative (403)
+            if curl -sf -H "Authorization: Bearer $ID_TOKEN" "$HEALTH_URL" > /dev/null; then
+              echo "✅ Health check passed!"
               exit 0
             fi
-            echo "Attempt $i/12 failed, retrying in 15s..."
-            sleep 15
+            echo "Attempt $i/10 failed, retrying in 10s..."
+            sleep 10
           done
-          echo "Health check failed after 12 attempts"
+          echo "❌ Health check failed after 10 attempts"
           exit 1
 
       - name: Deployment summary
