@@ -108,7 +108,7 @@ jobs:
             --min-instances 1
             --timeout 300
           env_vars: |-
-            DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
+            DISCORD_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
             DISCORD_ACTIVITY=${{ secrets.DISCORD_ACTIVITY || 'Helping with nutrition & fitness' }}
             DISCORD_ALLOWED_USER_IDS=${{ secrets.DISCORD_ALLOWED_USER_IDS }}
             DISCORD_ALLOWED_CHANNEL_IDS=${{ secrets.DISCORD_ALLOWED_CHANNEL_IDS }}
