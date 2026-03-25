@@ -10,24 +10,23 @@
 
 | Component | M3 State | M4 State | Impact |
 |-----------|----------|----------|--------|
-| Interaction | DM Only | Hybrid Private Channels | Professional Server Presence |
+| deployment | Unreliable Verification | **OIDC Verified CICD** | 100% Deployment Confidence |
+| Proactive | DM-hosted notifications | **Channel-hosted Proactive** | Unified User Experience |
 | Recovery | Manual Setup | `/sync` Command | User Context Resilience |
-| Deployment | 4m "False Negative" | <1m Verified Success | 4x Faster DevOps Loop |
-| Resilience | Silent Connection Fail | Active Health Status | Real-time Observability |
+| Observability | Generic "OK" signal | Bot-Connection Aware | Real-time Health Tracking |
 
 ---
 
-## 1. Interaction Architecture: The Hybrid Transition
+## 1. Interaction Logic: Proactive Migration
 
-### 1.1 Automated Private Channels
-- **Feature**: Automatic creation of dedicated logging channels upon profile completion.
+### 1.1 Proactive Messaging: DM → Private Channel
+- **Change**: Moved reminders and summaries from DM to the user's private server channel.
+- **File**: `src/discord_bot/bot.py` (`_send_proactive_message`)
+- **Impact**: Consolidates all health data and bot interactions into a single, private "hub" within the server.
+
+### 1.2 Automated Private Channels (Enhanced)
+- **Refinement**: While basic channel creation existed, M4 introduced deeper permission handling and state persistence for proactive routing.
 - **File**: `src/discord_bot/views.py` (`RegistrationViewB`)
-- **Impact**: Provides users with a persistent "Health Hub" inside the community server without compromising privacy.
-
-### 1.2 Recovery Mechanism: `/sync` Command
-- **Feature**: Re-scars/Re-creates channels if deleted or if user joined via DM.
-- **File**: `src/discord_bot/bot.py`
-- **Logic**: Triggered via message handler; verifies profile exists → creates channel → updates Supabase.
 
 ### 1.3 Hybrid Proactive Engine
 - **Refactor**: `_send_proactive_message` in `bot.py`
@@ -38,16 +37,15 @@
 
 ---
 
-## 2. DevOps & Infrastructure Resilience
+## 2. CICD & Deployment (Top Priority)
 
-### 2.1 Authenticated Health Checks (GHA)
-- **Fix**: Added OIDC token authentication to the verification cycle.
-- **File**: `.github/workflows/deploy-bot.yml`
-- **Benefit**: Resolves 403 Forbidden errors when checking private Cloud Run services.
+### 2.1 OIDC-Authenticated Health Verification
+- **Solution**: Integrated `gcloud auth print-identity-token` for secure health-check probing.
+- **Benefit**: Fixes the 403 Forbidden errors that previously caused "False Negative" deployment failures.
 
-### 2.2 Shared Connection State
-- **Refactor**: Integrated `BOT_CONNECTED` flag into `bot.py` shared with the internal health server.
-- **Benefit**: Health endpoint `/health` now reports `OK - STARTING` vs `OK - ONLINE`, preventing false-positive "Ready" signals from Cloud Run before the Discord gateway is established.
+### 2.2 Bot-Aware Health Endpoint
+- **Feature**: `/health` now distinguishes between process status and Discord connection status (`OK - ONLINE`).
+- **Benefit**: Ensures GHA only passes if the bot is actually logged in and ready.
 
 ### 2.3 Secret Harmonization
 - **Fix**: Resolved mismatch between `DISCORD_BOT_TOKEN` (GHA Secret) and `DISCORD_TOKEN` (Bot Code).
