@@ -544,19 +544,28 @@ class RegistrationViewB(ui.View):
                 await interaction.followup.send("⚠️ Error saving profile. Please contact support.", ephemeral=True)
 
     async def _create_private_health_channel(self, interaction: discord.Interaction):
-        """
-        v6.4: Create a private channel for daily health logging.
+        """Wrapper for interaction-based channel creation."""
+        await self._create_private_health_channel_for_user(
+            guild=interaction.guild,
+            user=interaction.user,
+            feedback_channel=interaction.followup if hasattr(interaction, 'followup') else interaction.channel
+        )
 
-        Creates a private text channel accessible only by the user and bot,
-        then sends a welcome message with quick-start instructions.
+    async def _create_private_health_channel_for_user(self, guild: Optional[discord.Guild], user: discord.User, feedback_channel: Any):
+        """
+        Core logic to create a private channel for daily health logging. (v7.1 Refactored)
         """
         try:
-            guild = interaction.guild
             if not guild:
                 logger.warning("Cannot create private channel: no guild context")
+                if hasattr(feedback_channel, 'send'):
+                    await feedback_channel.send(
+                        "💾 **Profile Saved!** Since we are in a Direct Message, I couldn't create a private channel for you in the server.\n\n"
+                        "👉 **Action Required**: Please go to the **Health Butler Server** and type `/sync` to create your private health channel there!",
+                        ephemeral=True if hasattr(feedback_channel, 'ephemeral') else False
+                    )
                 return
 
-            user = interaction.user
             base_name = user.display_name.lower().replace(' ', '-')
             channel_name = f"health-{base_name}"[:27]
 
@@ -566,8 +575,10 @@ class RegistrationViewB(ui.View):
                 logger.info(f"Private channel already exists for user {user.id}")
                 await existing.send(
                     f"👋 Welcome back, **{user.display_name}**! "
-                    f"Your profile has been updated. Ready to log your health journey!"
+                    f"Your health dashboard is ready."
                 )
+                if hasattr(feedback_channel, 'send'):
+                    await feedback_channel.send(f"🔗 Your private channel already exists: <#{existing.id}>", ephemeral=True)
                 return
 
             # Create private channel with specific permissions
@@ -576,7 +587,6 @@ class RegistrationViewB(ui.View):
                 guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True),
                 user: discord.PermissionOverwrite(read_messages=True, send_messages=True)
             }
-
 
             # Try to find or create a "Health Channels" category
             category = discord.utils.get(guild.categories, name="Health Channels")
@@ -590,8 +600,6 @@ class RegistrationViewB(ui.View):
                     logger.warning(f"Could not create category: {cat_err}")
                     category = None
 
-
-
             # Create the private channel
             private_channel = await guild.create_text_channel(
                 channel_name,
@@ -600,7 +608,6 @@ class RegistrationViewB(ui.View):
                 topic=f"Private health logging for {user.display_name}",
                 reason=f"Private health channel for {user.display_name}"
             )
-
 
             logger.info(f"Created private channel {private_channel.name} for user {user.id}")
 
