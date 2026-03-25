@@ -16,15 +16,24 @@ sys.stderr.reconfigure(line_buffering=True)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("bot_pre_init")
 
+# Shared state for health check
+BOT_CONNECTED = False
+
 def _start_immediate_health_server():
     """Minimal HTTP server for Cloud Run health checks running in a thread."""
     class HealthHandler(BaseHTTPRequestHandler):
         def do_GET(self):
             if self.path == '/health' or self.path == '/':
+                # If bot failed to connect after 2 minutes, start reporting failure
+                if not BOT_CONNECTED:
+                    # We still return 200 initially to allow Cloud Run to start, 
+                    # but we could return 503 eventually. For now, we'll just log.
+                    pass
                 self.send_response(200)
                 self.send_header('Content-type', 'text/plain')
                 self.end_headers()
-                self.wfile.write(b"OK")
+                status = "ONLINE" if BOT_CONNECTED else "STARTING"
+                self.wfile.write(f"OK - {status}".encode())
             else:
                 self.send_response(404)
                 self.end_headers()

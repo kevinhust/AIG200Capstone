@@ -663,24 +663,27 @@ class RegistrationViewB(ui.View):
 
 
             # Notify user in the original channel
-            await interaction.followup.send(
-                f"🔒 **Private channel created!** Check out <#{private_channel.id}> for daily logging.",
-                ephemeral=True
-            )
+            if hasattr(feedback_channel, 'send'):
+                await feedback_channel.send(
+                    f"🔒 **Private channel created!** Check out <#{private_channel.id}> for daily logging.",
+                    ephemeral=True if hasattr(feedback_channel, 'ephemeral') else False
+                )
         except discord.Forbidden:
             logger.warning("Bot lacks permissions to create private channels")
-            await interaction.followup.send(
-                "⚠️ Could not create private channel (missing permissions). "
-                "You can still use DMs for private logging!",
-                ephemeral=True
-            )
+            if hasattr(feedback_channel, 'send'):
+                await feedback_channel.send(
+                    "⚠️ Could not create private channel (missing permissions). "
+                    "You can still use DMs for private logging!",
+                    ephemeral=True if hasattr(feedback_channel, 'ephemeral') else False
+                )
         except Exception as e:
             logger.error(f"Error creating private channel: {e}")
-            await interaction.followup.send(
-                "⚠️ Could not create private channel, but your profile is saved! "
-                "Use DMs for private health logging.",
-                ephemeral=True
-            )
+            if hasattr(feedback_channel, 'send'):
+                await feedback_channel.send(
+                    "⚠️ Could not create private channel, but your profile is saved! "
+                    "Use DMs for private health logging.",
+                    ephemeral=True if hasattr(feedback_channel, 'ephemeral') else False
+                )
 class SettingsView(discord.ui.View):
     """View for managing user notification settings."""
     def __init__(self, user_id: str, profile: Dict[str, Any]):
