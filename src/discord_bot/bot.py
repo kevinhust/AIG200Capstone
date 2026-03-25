@@ -26,7 +26,8 @@ from src.discord_bot import profile_utils as pu
 from src.discord_bot import intent_parser as ip
 from src.discord_bot import commands as cmd
 from typing import Optional, List, Dict, Any
-from aiohttp import web
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Setup logging
 logging.basicConfig(
@@ -74,9 +75,9 @@ class HealthButlerDiscordBot(Client):
         logger.info("Health Butler Discord Bot initialized with Engagement and Analytics Agents")
 
     async def setup_hook(self):
-        logger.info("Bot setup_hook: starting proactive loops and health server")
-        # 1. Start health check server FIRST within the loop to signal Cloud Run we are ALIVE
-        await self._start_health_server()
+        logger.info("Bot setup_hook: starting proactive loops and initializing swarm")
+        # 1. Health server is now handled in a background thread in main() 
+        # to ensure immediate port binding for Cloud Run.
         
         # 2. Defer heavy Swarm/RAG initialization
         logger.info("⚡ Initializing HealthSwarm (this may take a moment)...")
@@ -105,16 +106,29 @@ class HealthButlerDiscordBot(Client):
         except Exception as e:
             logger.error(f"Failed to send proactive message to {user_id}: {e}")
 
-    async def _start_health_server(self):
-        """Minimal HTTP server for Cloud Run health checks."""
-        app = web.Application()
-        app.router.add_get('/health', lambda r: web.Response(text="OK"))
-        port = int(os.getenv("PORT", 8080))
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(runner, '0.0.0.0', port)
-        await site.start()
-        logger.info(f"❤️ Health check server started on port {port}")
+    def _start_health_server_threaded(self):
+        """Minimal HTTP server for Cloud Run health checks running in a thread."""
+        class HealthHandler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == '/health' or self.path == '/':
+                    self.send_response(200)
+                    self.send_header('Content-type', 'text/plain')
+                    self.end_headers()
+                    self.wfile.write(b"OK")
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+            def log_message(self, format, *args):
+                pass # Silencing logs to keep stdout clean
+
+        def run_server():
+            port = int(os.getenv("PORT", 8080))
+            server = HTTPServer(('0.0.0.0', port), HealthHandler)
+            logger.info(f"❤️ Threaded health check server started on port {port}")
+            server.serve_forever()
+
+        thread = threading.Thread(target=run_server, daemon=True)
+        thread.start()
 
     async def on_ready(self):
         logger.info(f"✅ Bot logged in as {self.user} (ID: {self.user.id})")
@@ -1174,6 +1188,9 @@ class HealthButlerDiscordBot(Client):
 
 def main():
     bot = HealthButlerDiscordBot()
+    # Start health server in background thread immediately to satisfy Cloud Run port binding
+    bot._start_health_server_threaded()
+    
     if DISCORD_TOKEN:
         bot.run(DISCORD_TOKEN)
     else:
