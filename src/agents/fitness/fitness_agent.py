@@ -55,12 +55,13 @@ class FitnessAgent(BaseAgent):
     - Falls back to DEFAULT_USER_PROFILE when no data available
     """
 
-    def __init__(self, db=None):
+    def __init__(self, db=None, api_config: Optional[Dict[str, str]] = None):
         """
         Initialize FitnessAgent with optional database dependency injection.
 
         Args:
             db: ProfileDB instance (optional, will create singleton if not provided)
+            api_config: Optional OpenAI-compatible BYOK config (base_url, api_key, model).
         """
         # Lazy import to avoid circular dependencies
         self._db = db
@@ -99,11 +100,15 @@ Before finalizing recommendations, verify:
 - If user ate fried food, is the suggested intensity appropriate?
 - If warnings present, have I included the BR-001 safety disclaimer?
 """
-
+        cfg = api_config or {}
+        use_openai = bool(
+            (cfg.get("base_url") or "").strip() or (cfg.get("api_key") or "").strip()
+        )
         super().__init__(
             role="fitness",
             system_prompt=base_prompt,
-            use_openai_api=False
+            use_openai_api=use_openai,
+            api_config=cfg,
         )
         self.rag = SimpleRagTool()
 

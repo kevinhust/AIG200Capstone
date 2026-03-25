@@ -517,6 +517,9 @@ class HealthButlerDiscordBot(Client):
                 "daily_intake": profile.get("meals", [])
             }
 
+            guild_id = str(message.guild.id) if message.guild else ""
+            llm_cfg = pu.get_llm_api_config_for_user(author_id, guild_id if guild_id else None)
+
             async with message.channel.typing():
                 if image_attachment:
                     image_path = f"/tmp/{image_attachment.filename}"
@@ -536,7 +539,8 @@ class HealthButlerDiscordBot(Client):
                             user_input="Analyze this meal", 
                             image_path=image_path, 
                             user_context=user_context,
-                            progress_callback=progress_update
+                            progress_callback=progress_update,
+                            llm_api_config=llm_cfg,
                         )
                     finally:
                         if os.path.exists(image_path):
@@ -548,7 +552,8 @@ class HealthButlerDiscordBot(Client):
                 else:
                     result = await self.swarm.execute_async(
                         user_input=message.content, 
-                        user_context=user_context
+                        user_context=user_context,
+                        llm_api_config=llm_cfg,
                     )
 
                 # Persist scanned meals only (image uploads). Text-only nutrition queries should NOT

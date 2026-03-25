@@ -31,15 +31,29 @@ class HealthSwarm:
         self.rag = SimpleRagTool()
         logger.info("HealthSwarm initialized with RouterAgent and Swarm Handoff support")
 
+    def _router_for(self, llm_api_config: Optional[Dict[str, str]]) -> RouterAgent:
+        """Return a RouterAgent configured for BYOK when credentials are present."""
+        if not llm_api_config:
+            return self.router
+        base = (llm_api_config.get("base_url") or "").strip()
+        key = (llm_api_config.get("api_key") or "").strip()
+        if not base and not key:
+            return self.router
+        return RouterAgent(use_openai_api=True, api_config=llm_api_config)
+
     async def execute_async(
         self, 
         user_input: str, 
         image_path: Optional[str] = None, 
         user_context: Optional[Dict[str, Any]] = None,
-        progress_callback: Optional[Any] = None
+        progress_callback: Optional[Any] = None,
+        llm_api_config: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """
         [Phase 3] High-level async execution with proactive handoffs.
+
+        Args:
+            llm_api_config: Optional OpenAI-compatible BYOK config for router + specialists.
         """
         lower_input = user_input.lower()
         
@@ -47,7 +61,7 @@ class HealthSwarm:
         if lower_input.startswith("transfer_to_nutrition"):
             from src.agents.nutrition.nutrition_agent import NutritionAgent
             logger.info("Swarm Handoff: Force Routing to Nutrition")
-            agent = NutritionAgent()
+            agent = NutritionAgent(api_config=llm_api_config)
             
             # Extract kcal if present in signal
             kcal_hint = 0
@@ -66,7 +80,7 @@ class HealthSwarm:
         if lower_input.startswith("transfer_to_fitness"):
             from src.agents.fitness.fitness_agent import FitnessAgent
             logger.info("Swarm Handoff: Force Routing to Fitness")
-            agent = FitnessAgent()
+            agent = FitnessAgent(api_config=llm_api_config)
             response = await agent.execute_async(user_input, [{"type": "user_context", "content": json.dumps(user_context or {})}])
             return {"response": response, "agent": "fitness"}
 
@@ -82,8 +96,9 @@ class HealthSwarm:
             response = await agent.execute_async(user_input, ctx)
             return {"response": response, "agent": "repcount"}
 
-        # 2. Collaborative Delegation via RouterAgent
-        delegations = self.router.analyze_and_delegate(user_input)
+        # 2. Collaborative Delegation via RouterAgent (BYOK-aware)
+        active_router = self._router_for(llm_api_config)
+        delegations = active_router.analyze_and_delegate(user_input)
         
         results = []
         final_agent = "router"
@@ -94,7 +109,7 @@ class HealthSwarm:
             
             if agent_type == "fitness":
                 from src.agents.fitness.fitness_agent import FitnessAgent
-                agent = FitnessAgent()
+                agent = FitnessAgent(api_config=llm_api_config)
                 context = [{"type": "user_context", "content": json.dumps(user_context or {})}]
                 res = await agent.execute_async(task, context)
                 results.append(res)
@@ -102,7 +117,7 @@ class HealthSwarm:
             
             elif agent_type == "nutrition":
                 from src.agents.nutrition.nutrition_agent import NutritionAgent
-                agent = NutritionAgent()
+                agent = NutritionAgent(api_config=llm_api_config)
                 context = [{"type": "user_context", "content": json.dumps(user_context or {})}]
                 if image_path:
                     context.append({"type": "image_path", "content": image_path})
@@ -129,7 +144,7 @@ class HealthSwarm:
             
             else:
                 # Fallback for coder/researcher/etc.
-                res = await asyncio.to_thread(self.router.execute, task)
+                res = await asyncio.to_thread(active_router.execute, task)
                 results.append(res)
 
         # Synthesis: If multiple results, combine them. If one, return as is (for specialized JSON handling)
@@ -137,7 +152,7 @@ class HealthSwarm:
             return {"response": results[0], "agent": final_agent}
         
         # Multi-agent synthesis
-        combined_response = self.router.synthesize_results(delegations, results)
+        combined_response = active_router.synthesize_results(delegations, results)
         return {"response": combined_response, "agent": "router"}
 
     def execute(self, user_input: str, image_path: Optional[str] = None, user_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:

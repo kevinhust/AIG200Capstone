@@ -50,6 +50,8 @@ def get_user_profile(user_id: str) -> Dict[str, Any]:
                 "activity": profile.get("activity", "Moderately Active"),
                 "diet": profile.get("diet", []).split(", ") if profile.get("diet") else [],
                 "preferences": profile.get("preferences_json") or {},
+                "weekly_split": profile.get("weekly_split") or {},
+                "privacy_level": profile.get("privacy_level", "friends"),
                 "meals": []
             }
             return _user_profiles_cache[user_id]
@@ -212,3 +214,57 @@ def _parse_int_set(env_val: Optional[str]) -> set[int]:
 
 def save_demo_profile(user_id: str, profile: Dict[str, Any]) -> bool:
     return save_user_profile(user_id, profile)
+
+
+def get_llm_api_config_for_user(
+    discord_user_id: str,
+    guild_id: Optional[str] = None,
+) -> Optional[Dict[str, str]]:
+    """Resolve BYOK OpenAI-compatible credentials for the router and specialist agents.
+
+    Tries user-level configs first (openai, local, custom, anthropic), then guild-level
+    fallback when ``guild_id`` is set. Returns a dict suitable for ``BaseAgent(api_config=...)``:
+    ``base_url``, ``api_key``, ``model``.
+
+    Args:
+        discord_user_id: Discord snowflake as string.
+        guild_id: Optional guild id for server-wide BYOK fallback.
+
+    Returns:
+        API config dict, or ``None`` if no usable BYOK row exists or decryption fails.
+    """
+    global profile_db
+    if not profile_db:
+        return None
+
+    from src.config import settings
+
+    gid = str(guild_id).strip() if guild_id else ""
+    providers = ("openai", "local", "custom", "anthropic")
+
+    for provider in providers:
+        try:
+            row = profile_db.resolve_llm_config(
+                discord_user_id=str(discord_user_id),
+                guild_id=gid,
+                provider=provider,
+            )
+        except Exception as exc:
+            logger.debug(
+                "get_llm_api_config_for_user: resolve failed (provider=%s): %s",
+                provider,
+                exc,
+            )
+            continue
+        if not row:
+            continue
+        base = (row.get("base_url") or "").strip().rstrip("/")
+        key = (row.get("api_key") or "").strip()
+        if not base and not key:
+            continue
+        if not base and key:
+            base = (settings.OPENAI_BASE_URL or "https://api.openai.com/v1").strip().rstrip("/")
+        model = (row.get("model_name") or "").strip() or settings.OPENAI_MODEL
+        return {"base_url": base, "api_key": key, "model": model}
+
+    return None

@@ -895,10 +895,14 @@ class OverTargetPromptView(discord.ui.View):
             
             from src.swarm import handoff_to_fitness
             handoff_signal = handoff_to_fitness()
-            
+
+            gid = str(interaction.guild.id) if interaction.guild else ""
+            llm_cfg = pu.get_llm_api_config_for_user(self.user_id, gid if gid else None)
+
             result = await self.bot.swarm.execute_async(
                 user_input=f"{handoff_signal}: My calories are over target today. Can you help me work it off?",
-                user_context=user_context
+                user_context=user_context,
+                llm_api_config=llm_cfg,
             )
             
             await self.bot._send_swarmed_response(

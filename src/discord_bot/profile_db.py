@@ -442,7 +442,10 @@ class ProfileDB:
         user_cfg = self.get_llm_config(owner_id=str(discord_user_id), owner_type="user", provider=provider)
         if user_cfg:
             return user_cfg
-        return self.get_llm_config(owner_id=str(guild_id), owner_type="guild", provider=provider)
+        gid = str(guild_id or "").strip()
+        if not gid:
+            return None
+        return self.get_llm_config(owner_id=gid, owner_type="guild", provider=provider)
 
     # ============================================
     # Daily Logs Operations

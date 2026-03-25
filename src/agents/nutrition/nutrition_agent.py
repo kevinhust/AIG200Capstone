@@ -31,7 +31,11 @@ class NutritionAgent(BaseAgent):
     - Uses SimpleRagTool.search_food to anchor vision estimates in ground truth.
     """
     
-    def __init__(self, vision_tool: Optional[VisionTool] = None):
+    def __init__(
+        self,
+        vision_tool: Optional[VisionTool] = None,
+        api_config: Optional[Dict[str, str]] = None,
+    ):
         super().__init__(
             role="nutrition",
             system_prompt="""You are an expert Nutritionist AI.
@@ -85,6 +89,21 @@ CRITICAL RULES:
         self.rag = SimpleRagTool()
         # Backwards-compatible attribute name used by earlier phases/tests.
         self.rag_tool = self.rag
+
+        # Optional BYOK: OpenAI-compatible synthesis while vision stays on Gemini.
+        self._byok_synthesis: Optional[Dict[str, str]] = None
+        if api_config:
+            bu = (api_config.get("base_url") or "").strip()
+            k = (api_config.get("api_key") or "").strip()
+            if bu or k:
+                base = bu.rstrip("/") if bu else (
+                    settings.OPENAI_BASE_URL or "https://api.openai.com/v1"
+                ).strip().rstrip("/")
+                self._byok_synthesis = {
+                    "base_url": base,
+                    "api_key": k,
+                    "model": (api_config.get("model") or settings.OPENAI_MODEL),
+                }
 
         # Safety net: BaseAgent may leave self.client=None when it fails to read
         # the API key (e.g. env var not yet loaded at import time).  Re-try here.
@@ -635,8 +654,55 @@ Copy 'visual_warnings' and 'health_score' from VISION_RESULT.
                 vision_info["dish_name"] = items[0]["name"]
         return vision_info
 
+    async def _synthesize_final_async_byok(self, prompt: str) -> Optional[Dict]:
+        """Run final JSON synthesis via an OpenAI-compatible BYOK endpoint."""
+        import aiohttp
+
+        cfg = self._byok_synthesis or {}
+        base = (cfg.get("base_url") or "").strip().rstrip("/")
+        api_key = (cfg.get("api_key") or "").strip()
+        model = (cfg.get("model") or settings.OPENAI_MODEL)
+        if not base:
+            return None
+
+        url = f"{base}/chat/completions"
+        headers: Dict[str, str] = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        user_content = (
+            "Respond with ONLY a valid JSON object (no markdown fences).\n\n" + prompt
+        )
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": user_content},
+        ]
+        payload: Dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.7,
+            "max_tokens": 4096,
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload, headers=headers, timeout=120) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            parsed = self._extract_json(content) if content else None
+            return parsed
+        except Exception as exc:
+            logger.error("[NutritionAgent] BYOK synthesis failed: %s", exc)
+            return None
+
     async def _synthesize_final_async(self, prompt: str) -> Optional[Dict]:
         """Helper to run the final structured synthesis asynchronously."""
+        if self._byok_synthesis:
+            byok_result = await self._synthesize_final_async_byok(prompt)
+            if byok_result is not None:
+                return byok_result
+
         from google.genai.types import GenerateContentConfig
         try:
             response = await self.client.aio.models.generate_content(
