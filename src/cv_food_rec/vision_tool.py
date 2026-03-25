@@ -51,8 +51,11 @@ class VisionTool:
             logger.info("🚀 Loading YOLO11 model: %s...", self.model_name)
             VisionTool._model = YOLO(self.model_name)
             logger.info("✅ YOLO11 model loaded successfully.")
+        except ImportError:
+            logger.warning("⚠️ 'ultralytics' not installed. Local YOLO detection disabled.")
+            VisionTool._model = None
         except Exception as e:
-            logger.error("❌ Failed to load YOLOv8 model: %s. Vision features will be limited.", e)
+            logger.error("❌ Failed to load YOLO11 model: %s. Vision features will be limited.", e)
             VisionTool._model = None
 
     def detect_food(self, image_path: str) -> List[Dict[str, Any]]:
