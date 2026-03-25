@@ -1,33 +1,72 @@
-"""
-Personal Health Butler Discord Bot
-
-Main entry point for Discord Bot deployment on Google Cloud Run.
-Integrates HealthSwarm for message processing with persistent Gateway connection.
-"""
-
-import asyncio
+import sys
 import logging
 import os
 import json
 from json import JSONDecoder
 import re
 import uuid
-import discord
-from discord import Client, Intents, Embed
-from discord.ext import tasks
-from datetime import datetime, time
-from src.swarm import HealthSwarm
-from src.discord_bot.embed_builder import HealthButlerEmbed
-from src.discord_bot.views import RegistrationViewA, OnboardingGreetingView, NewUserGuideView
-from src.agents.engagement.engagement_agent import EngagementAgent
-from src.agents.analytics.analytics_agent import AnalyticsAgent
-from src.discord_bot.profile_db import get_profile_db
-from src.discord_bot import profile_utils as pu
-from src.discord_bot import intent_parser as ip
-from src.discord_bot import commands as cmd
-from typing import Optional, List, Dict, Any
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
+
+# Immediate stdout/stderr flushing
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
+
+# Basic logging setup at first possible moment
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("bot_pre_init")
+
+def _start_immediate_health_server():
+    """Minimal HTTP server for Cloud Run health checks running in a thread."""
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == '/health' or self.path == '/':
+                self.send_response(200)
+                self.send_header('Content-type', 'text/plain')
+                self.end_headers()
+                self.wfile.write(b"OK")
+            else:
+                self.send_response(404)
+                self.end_headers()
+        def log_message(self, format, *args): pass
+
+    def run_server():
+        try:
+            port = int(os.getenv("PORT", 8080))
+            server = HTTPServer(('0.0.0.0', port), HealthHandler)
+            logger.info(f"❤️ IMMEDIATE health server on port {port}")
+            server.serve_forever()
+        except Exception as e:
+            print(f"HEALTH SERVER FATAL: {e}", file=sys.stderr)
+
+    t = threading.Thread(target=run_server, daemon=True)
+    t.start()
+    return t
+
+# START HEALTH SERVER BEFORE ANY IMPORTS
+_start_immediate_health_server()
+
+try:
+    import asyncio
+    import discord
+    from discord import Client, Intents, Embed
+    from discord.ext import tasks
+    from datetime import datetime, time
+    from src.swarm import HealthSwarm
+    from src.discord_bot.embed_builder import HealthButlerEmbed
+    from src.discord_bot.views import RegistrationViewA, OnboardingGreetingView, NewUserGuideView
+    from src.agents.engagement.engagement_agent import EngagementAgent
+    from src.agents.analytics.analytics_agent import AnalyticsAgent
+    from src.discord_bot.profile_db import get_profile_db
+    from src.discord_bot import profile_utils as pu
+    from src.discord_bot import intent_parser as ip
+    from src.discord_bot import commands as cmd
+    from typing import Optional, List, Dict, Any
+except Exception as e:
+    print(f"FATAL IMPORT ERROR: {e}", file=sys.stderr)
+    import traceback
+    traceback.print_exc(file=sys.stderr)
+    sys.exit(1)
 
 # Setup logging
 logging.basicConfig(
@@ -106,29 +145,7 @@ class HealthButlerDiscordBot(Client):
         except Exception as e:
             logger.error(f"Failed to send proactive message to {user_id}: {e}")
 
-    def _start_health_server_threaded(self):
-        """Minimal HTTP server for Cloud Run health checks running in a thread."""
-        class HealthHandler(BaseHTTPRequestHandler):
-            def do_GET(self):
-                if self.path == '/health' or self.path == '/':
-                    self.send_response(200)
-                    self.send_header('Content-type', 'text/plain')
-                    self.end_headers()
-                    self.wfile.write(b"OK")
-                else:
-                    self.send_response(404)
-                    self.end_headers()
-            def log_message(self, format, *args):
-                pass # Silencing logs to keep stdout clean
-
-        def run_server():
-            port = int(os.getenv("PORT", 8080))
-            server = HTTPServer(('0.0.0.0', port), HealthHandler)
-            logger.info(f"❤️ Threaded health check server started on port {port}")
-            server.serve_forever()
-
-        thread = threading.Thread(target=run_server, daemon=True)
-        thread.start()
+    # _start_health_server_threaded removed, handled in global scope for immediate effect
 
     async def on_ready(self):
         logger.info(f"✅ Bot logged in as {self.user} (ID: {self.user.id})")
@@ -1187,14 +1204,17 @@ class HealthButlerDiscordBot(Client):
 # Command methods removed, logic moved to cmd module.
 
 def main():
-    bot = HealthButlerDiscordBot()
-    # Start health server in background thread immediately to satisfy Cloud Run port binding
-    bot._start_health_server_threaded()
-    
-    if DISCORD_TOKEN:
-        bot.run(DISCORD_TOKEN)
-    else:
-        logger.error("No DISCORD_TOKEN found.")
+    try:
+        bot = HealthButlerDiscordBot()
+        if DISCORD_TOKEN:
+            bot.run(DISCORD_TOKEN)
+        else:
+            logger.error("No DISCORD_TOKEN found.")
+    except Exception as e:
+        print(f"FATAL RUNTIME ERROR: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
