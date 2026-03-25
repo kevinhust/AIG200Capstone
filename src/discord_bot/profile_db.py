@@ -8,6 +8,7 @@ Provides persistent storage for:
 
 import os
 import json
+import logging
 from typing import Dict, Any, Optional, List, Any as _Any
 from datetime import date, datetime, timedelta
 try:
@@ -18,6 +19,8 @@ except Exception:  # pragma: no cover
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 class ProfileDB:
@@ -161,6 +164,285 @@ class ProfileDB:
         except Exception as exc:
             print(f"DEBUG: Failed to delete profile for {discord_user_id}: {exc}")
             return False
+
+    # ============================================
+    # Multiplayer: Weekly Split + Privacy
+    # ============================================
+
+    def update_weekly_split(
+        self,
+        discord_user_id: str,
+        weekly_split: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        """Update `profiles.weekly_split` for matchmaking."""
+        response = (
+            self.client.table("profiles")
+            .update({"weekly_split": weekly_split})
+            .eq("id", discord_user_id)
+            .execute()
+        )
+        return response.data[0] if response.data else None
+
+    def get_matchmaking_candidates(
+        self,
+        *,
+        muscle_groups: List[str],
+        day: str,
+        exclude_user_id: str,
+        limit: int = 50,
+    ) -> List[Dict[str, Any]]:
+        """Return candidate profiles whose split overlaps `muscle_groups` on `day`.
+
+        This is implemented as a simple Python-side filter for compatibility with
+        multiple Supabase/PostgREST versions. You can later replace this with a
+        server-side SQL function for efficient JSONB overlap queries.
+        """
+        day_key = (day or "").strip().lower()
+        wanted = {str(m or "").strip().lower() for m in (muscle_groups or []) if str(m or "").strip()}
+
+        response = self.client.table("profiles").select("id,full_name,weekly_split,privacy_level").execute()
+        rows = response.data or []
+
+        matches: list[dict[str, Any]] = []
+        for row in rows:
+            if str(row.get("id")) == str(exclude_user_id):
+                continue
+
+            privacy = str(row.get("privacy_level") or "friends").lower()
+            if privacy == "private":
+                continue
+
+            split = row.get("weekly_split") or {}
+            day_values = split.get(day_key) if isinstance(split, dict) else None
+            if not isinstance(day_values, list):
+                continue
+
+            theirs = {str(x or "").strip().lower() for x in day_values if str(x or "").strip()}
+            if wanted and theirs.intersection(wanted):
+                matches.append(row)
+                if len(matches) >= limit:
+                    break
+
+        return matches
+
+    def update_privacy_level(self, discord_user_id: str, privacy_level: str) -> Optional[Dict[str, Any]]:
+        """Update `profiles.privacy_level` ('public'|'friends'|'private')."""
+        response = (
+            self.client.table("profiles")
+            .update({"privacy_level": privacy_level})
+            .eq("id", discord_user_id)
+            .execute()
+        )
+        return response.data[0] if response.data else None
+
+    # ============================================
+    # Multiplayer: Friend Connections
+    # ============================================
+
+    def send_friend_request(self, requester_id: str, addressee_id: str) -> Optional[Dict[str, Any]]:
+        """Create a pending friend request from `requester_id` to `addressee_id`."""
+        if str(requester_id) == str(addressee_id):
+            raise ValueError("Cannot friend-request yourself")
+
+        payload = {
+            "requester_id": str(requester_id),
+            "addressee_id": str(addressee_id),
+            "status": "pending",
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+        response = self.client.table("friend_connections").insert(payload).execute()
+        return response.data[0] if response.data else None
+
+    def respond_to_friend_request(self, connection_id: str, *, accept: bool) -> Optional[Dict[str, Any]]:
+        """Accept a friend request (or delete it if declined)."""
+        if accept:
+            response = (
+                self.client.table("friend_connections")
+                .update({"status": "accepted", "updated_at": datetime.utcnow().isoformat()})
+                .eq("id", connection_id)
+                .execute()
+            )
+            return response.data[0] if response.data else None
+
+        # Decline: delete the pending request (non-blocking).
+        self.client.table("friend_connections").delete().eq("id", connection_id).execute()
+        return None
+
+    def get_friends(self, discord_user_id: str) -> List[Dict[str, Any]]:
+        """Return accepted friend connections for the user (both directions)."""
+        uid = str(discord_user_id)
+        a = (
+            self.client.table("friend_connections")
+            .select("*")
+            .eq("requester_id", uid)
+            .eq("status", "accepted")
+            .execute()
+        )
+        b = (
+            self.client.table("friend_connections")
+            .select("*")
+            .eq("addressee_id", uid)
+            .eq("status", "accepted")
+            .execute()
+        )
+        return (a.data or []) + (b.data or [])
+
+    def get_pending_requests(self, discord_user_id: str) -> List[Dict[str, Any]]:
+        """Return pending incoming friend requests for the user."""
+        uid = str(discord_user_id)
+        response = (
+            self.client.table("friend_connections")
+            .select("*")
+            .eq("addressee_id", uid)
+            .eq("status", "pending")
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return response.data or []
+
+    def can_view_profile(self, viewer_id: str, target_id: str) -> bool:
+        """Enforce `profiles.privacy_level` using the friend graph."""
+        if str(viewer_id) == str(target_id):
+            return True
+
+        target = self.get_profile(str(target_id)) or {}
+        privacy = str(target.get("privacy_level") or "friends").lower()
+        if privacy == "public":
+            return True
+        if privacy == "private":
+            return False
+
+        # friends-only: accepted connection in either direction
+        uid = str(viewer_id)
+        tid = str(target_id)
+        a = (
+            self.client.table("friend_connections")
+            .select("id")
+            .eq("requester_id", uid)
+            .eq("addressee_id", tid)
+            .eq("status", "accepted")
+            .limit(1)
+            .execute()
+        )
+        if a.data:
+            return True
+        b = (
+            self.client.table("friend_connections")
+            .select("id")
+            .eq("requester_id", tid)
+            .eq("addressee_id", uid)
+            .eq("status", "accepted")
+            .limit(1)
+            .execute()
+        )
+        return bool(b.data)
+
+    # ============================================
+    # Multiplayer: Guild Settings
+    # ============================================
+
+    def get_guild_settings(self, guild_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch settings for a Discord guild/server."""
+        response = (
+            self.client.table("guild_settings")
+            .select("*")
+            .eq("guild_id", str(guild_id))
+            .limit(1)
+            .execute()
+        )
+        return response.data[0] if response.data else None
+
+    def upsert_guild_settings(self, guild_id: str, **settings: Any) -> Optional[Dict[str, Any]]:
+        """Create or update guild settings (upsert on `guild_id`)."""
+        payload: Dict[str, Any] = {"guild_id": str(guild_id), **settings, "updated_at": datetime.utcnow().isoformat()}
+        response = self.client.table("guild_settings").upsert(payload, on_conflict="guild_id").execute()
+        return response.data[0] if response.data else None
+
+    # ============================================
+    # Multiplayer: BYOK (Bring Your Own Key)
+    # ============================================
+
+    def _get_byok_passphrase(self) -> str:
+        """Read the server-side encryption passphrase from env."""
+        passphrase = os.getenv("BYOK_ENCRYPTION_KEY", "").strip()
+        if not passphrase:
+            raise RuntimeError("BYOK_ENCRYPTION_KEY is missing (required to encrypt/decrypt BYOK API keys)")
+        return passphrase
+
+    def save_llm_config(
+        self,
+        *,
+        owner_id: str,
+        owner_type: str,
+        provider: str,
+        api_key: str,
+        base_url: str = "",
+        model_name: str = "",
+        is_active: bool = True,
+    ) -> Optional[Dict[str, Any]]:
+        """Upsert an encrypted LLM config via the `upsert_user_llm_config` RPC."""
+        params = {
+            "p_owner_id": str(owner_id),
+            "p_owner_type": str(owner_type),
+            "p_provider": str(provider),
+            "p_base_url": base_url or "",
+            "p_model_name": model_name or "",
+            "p_plain_api_key": api_key or "",
+            "p_passphrase": self._get_byok_passphrase(),
+            "p_is_active": bool(is_active),
+        }
+        try:
+            response = self.client.rpc("upsert_user_llm_config", params).execute()
+            if response.data:
+                return response.data[0] if isinstance(response.data, list) else response.data
+            return None
+        except Exception as exc:
+            logger.warning("[ProfileDB] save_llm_config failed: %s", exc)
+            raise
+
+    def get_llm_config(
+        self,
+        *,
+        owner_id: str,
+        owner_type: str = "user",
+        provider: str = "openai",
+    ) -> Optional[Dict[str, Any]]:
+        """Fetch a decrypted LLM config via the `get_user_llm_config` RPC."""
+        params = {
+            "p_owner_id": str(owner_id),
+            "p_owner_type": str(owner_type),
+            "p_provider": str(provider),
+            "p_passphrase": self._get_byok_passphrase(),
+        }
+        response = self.client.rpc("get_user_llm_config", params).execute()
+        if not response.data:
+            return None
+        return response.data[0] if isinstance(response.data, list) else response.data
+
+    def delete_llm_config(self, *, owner_id: str, owner_type: str, provider: str) -> bool:
+        """Delete an LLM config for an owner/provider."""
+        response = (
+            self.client.table("user_llm_configs")
+            .delete()
+            .eq("owner_id", str(owner_id))
+            .eq("owner_type", str(owner_type))
+            .eq("provider", str(provider))
+            .execute()
+        )
+        return response is not None
+
+    def resolve_llm_config(
+        self,
+        *,
+        discord_user_id: str,
+        guild_id: str,
+        provider: str = "openai",
+    ) -> Optional[Dict[str, Any]]:
+        """Prefer user-level config; fall back to guild-level config."""
+        user_cfg = self.get_llm_config(owner_id=str(discord_user_id), owner_type="user", provider=provider)
+        if user_cfg:
+            return user_cfg
+        return self.get_llm_config(owner_id=str(guild_id), owner_type="guild", provider=provider)
 
     # ============================================
     # Daily Logs Operations
