@@ -12,8 +12,8 @@
 |-----------|----------|----------|--------|
 | deployment | Unreliable Verification | **OIDC Verified CICD** | 100% Deployment Confidence |
 | Proactive | DM-hosted notifications | **Channel-hosted Proactive** | Unified User Experience |
+| Vision | Basic Gemini Flow | **YOLO-Accelerated Pipeline** | Faster Pre-location & Processing |
 | Recovery | Manual Setup | `/sync` Command | User Context Resilience |
-| Observability | Generic "OK" signal | Bot-Connection Aware | Real-time Health Tracking |
 
 ---
 
@@ -24,9 +24,9 @@
 - **File**: `src/discord_bot/bot.py` (`_send_proactive_message`)
 - **Impact**: Consolidates all health data and bot interactions into a single, private "hub" within the server.
 
-### 1.2 Automated Private Channels (Enhanced)
-- **Refinement**: While basic channel creation existed, M4 introduced deeper permission handling and state persistence for proactive routing.
-- **File**: `src/discord_bot/views.py` (`RegistrationViewB`)
+### 1.2 Vision Acceleration: YOLO11 Integration
+- **Concept**: Use YOLO11 as a "fast-path" for food localization and preliminary identification.
+- **Role**: Pre-locates items to provide spatial hints to the high-precision Gemini model, significantly accelerating the multi-item recognition loop.
 
 ### 1.3 Hybrid Proactive Engine
 - **Refactor**: `_send_proactive_message` in `bot.py`

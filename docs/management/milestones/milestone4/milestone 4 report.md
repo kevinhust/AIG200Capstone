@@ -19,7 +19,11 @@ While the base models (**Gemini 2.5 Flash** and **YOLO11**) remain stable from M
 - **Contextual Awareness**: The Coordinator agent now tracks whether a conversation is happening in a `private_channel` or `DM`.
 - **Latency Optimization**: Optimized the parallel execution of the `NutritionAgent` and `FitnessAgent` when `/sync` or summaries are triggered.
 
-### B. Multi-Agent Orchestration Refactor
+### C. Vision Pipeline Optimization: YOLO + Gemini
+In M4, we formalized the **Vision Acceleration Pipeline**. Although the final production deployment relies on Gemini 2.5 Flash for high-precision extraction, the architecture includes **YOLO11** as an initial perception layer.
+- **Pre-location**: YOLO11 is utilized to quickly locate multiple food items within a single image.
+- **Initial Classification**: Rapid identification of broad food categories to provide context hints.
+- **Acceleration**: By pre-processing the visual scene, the system reduces the cognitive load on the LLM, leading to faster total response times in a scaled environment.
 **New Flow (v9.5):**
 ```mermaid
 graph LR
