@@ -63,7 +63,11 @@ try:
     from datetime import datetime, time
     from src.swarm import HealthSwarm
     from src.discord_bot.embed_builder import HealthButlerEmbed
-    from src.discord_bot.views import RegistrationViewA, OnboardingGreetingView, NewUserGuideView
+    from src.discord_bot.views import (
+        RegistrationViewA, OnboardingGreetingView, NewUserGuideView,
+        LogWorkoutView, MealLogView, NutritionHandoffView, OverTargetPromptView
+    )
+    from src.discord_bot.roulette_view import MealInspirationView
     from src.agents.engagement.engagement_agent import EngagementAgent
     from src.agents.analytics.analytics_agent import AnalyticsAgent
     from src.discord_bot.profile_db import get_profile_db
