@@ -1,13 +1,16 @@
 import logging
+import json
 import discord
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from src.discord_bot import profile_utils as pu
 from src.discord_bot.modals import RegistrationModal
 from src.discord_bot.views import RegistrationViewA, StartSetupView
+from src.agents.fitness.fitness_agent import FitnessAgent
+from src.data_rag.simple_rag_tool import SimpleRagTool
 
 logger = logging.getLogger(__name__)
 
-async def _on_registration_modal_submit(interaction: discord.Interaction, data: Dict[str, Any], HealthButlerEmbed):
+async def _on_registration_modal_submit(interaction: discord.Interaction, data: Dict[str, Any], HealthButlerEmbed, bot=None):
     """Callback for v4.1 simplified RegistrationModal (Step 1/3)"""
     user_id = str(interaction.user.id)
     
@@ -33,7 +36,7 @@ async def _on_registration_modal_submit(interaction: discord.Interaction, data: 
     )
     
     # Instantiate the new modular view
-    view = RegistrationViewA(user_id, pu._demo_user_profile[user_id], HealthButlerEmbed)
+    view = RegistrationViewA(bot, user_id, pu._demo_user_profile[user_id], HealthButlerEmbed)
     
     await interaction.response.send_message(
         embed=embed,
@@ -167,15 +170,17 @@ async def handle_help_command(message: discord.Message, HealthButlerEmbed):
         value=(
             "**Upload a photo** of your meal for instant macro analysis.\n"
             "**Type 'Summary'** to see your current calorie budget.\n"
-            "**Type 'Who am I?'** to view your active profile."
+            "**Type 'Who am I?'** to view your active profile.\n"
+            "`/fitness` - Get workout recommendations instantly."
         ),
         inline=False
     )
-    
+
     # 3. Advanced Features
     embed.add_field(
         name="🏋️ Advanced Features",
         value=(
+            "`/fitness [type]` - Workout plan (cardio, strength, yoga)\n"
             "`/trends` - View your 30-day health analytics.\n"
             "`/roulette` - Spin for meal inspiration 🎰.\n"
             "`/settings` - Manage notifications."
@@ -195,3 +200,120 @@ async def handle_help_command(message: discord.Message, HealthButlerEmbed):
     
     embed.set_footer(text="Health Butler v7.0 | Clean Architecture")
     await message.reply(embed=embed)
+
+
+async def handle_fitness_command(
+    message: discord.Message,
+    HealthButlerEmbed,
+    category: Optional[str] = None
+):
+    """🏋️ Handle /fitness command - direct fitness recommendations"""
+    user_id = str(message.author.id)
+    profile = pu.get_user_profile(user_id)
+
+    if not profile or not profile.get("name"):
+        await message.reply(
+            "⚠️ You don't have a profile yet. Run `/demo` to set up first."
+        )
+        return
+
+    # Build task based on category
+    task = "Give me a workout plan"
+    if category:
+        # Map common category aliases
+        category_map = {
+            "cardio": "Cardio",
+            "strength": "Strength",
+            "flexibility": "Flexibility",
+            "hiit": "HIIT",
+            "stretch": "Stretching",
+            "yoga": "Yoga",
+        }
+        normalized = category_map.get(category.lower(), category)
+        task = f"Give me a {normalized} workout plan"
+
+    # Get recent health memo from meals
+    from src.discord_bot.profile_db import get_profile_db
+    db = get_profile_db()
+
+    visual_warnings = []
+    try:
+        # Get recent meals to check for recent food warnings (limit to last 5)
+        meals = db.get_meals(user_id, limit=5) if db else []
+        for meal in meals:
+            warnings = meal.get("visual_warnings", [])
+            if warnings:
+                visual_warnings.extend(warnings)
+    except Exception as e:
+        logger.warning(f"Could not fetch recent meals for memo: {e}")
+
+    # Add visual warnings to task if found
+    if visual_warnings:
+        task += f" (Note: Recent food warnings: {', '.join(set(visual_warnings))})"
+
+    # Execute Fitness Agent (skip typing indicator to avoid 429)
+    try:
+        agent = FitnessAgent()
+        context = [{"type": "user_context", "content": json.dumps({"user_id": user_id})}]
+
+        # Run synchronously
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                result_str = await asyncio.to_thread(agent.execute, task, context)
+            else:
+                result_str = loop.run_until_complete(agent.execute_async(task, context))
+        except RuntimeError:
+            result_str = await agent.execute_async(task, context)
+
+        # Parse JSON response - handle both raw JSON and markdown-wrapped JSON
+        try:
+            # Try direct parse first
+            result = json.loads(result_str)
+        except:
+            # Clean up markdown code blocks if present
+            cleaned = result_str.strip()
+            if "```json" in cleaned:
+                cleaned = cleaned.split("```json")[-1].split("```")[0].strip()
+            elif "```" in cleaned:
+                cleaned = cleaned.split("```")[-1].split("```")[0].strip()
+            try:
+                result = json.loads(cleaned)
+            except:
+                result = {"summary": result_str[:500], "recommendations": []}
+
+        # Build embed
+        embed = HealthButlerEmbed.build_fitness_card(
+            data=result,
+            user_name=profile.get("name", "User"),
+            budget_progress=result.get("budget_progress"),
+            empathy_strategy=result.get("empathy_strategy"),
+            user_habits=result.get("user_habits")
+        )
+
+        # Add category info if specified
+        if category:
+            embed.description += f"\n\n📂 Filter: **{category.upper()}**"
+
+        # Add interactive view with buttons
+        from src.discord_bot.views import LogWorkoutView
+        view = LogWorkoutView(bot=None, data=result, user_id=user_id)
+
+        await message.reply(embed=embed, view=view)
+
+    except discord.HTTPException as e:
+        if e.status == 429:
+            logger.warning(f"Rate limited on fitness command, trying followup: {e}")
+            # Fallback: send as new message instead of reply
+            try:
+                await message.channel.send(embed=embed, view=view)
+            except:
+                await message.channel.send(f"🏋️ Here's your workout plan: {result.get('summary', 'Generated')[:500]}")
+        else:
+            logger.error(f"HTTP error in /fitness command: {e}")
+            await message.reply(f"⚠️ Error: {str(e)[:100]}")
+
+    except Exception as e:
+        logger.error(f"Error in /fitness command: {e}")
+        await message.reply(f"⚠️ Failed to generate fitness plan: {str(e)[:100]}")

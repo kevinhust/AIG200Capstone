@@ -219,7 +219,7 @@ class HealthButlerDiscordBot(Client):
         
         try:
             # We instantiate the view just to use its helper method
-            dummy_view = RegistrationViewB(user_id, profile, HealthButlerEmbed)
+            dummy_view = RegistrationViewB(self, user_id, profile, HealthButlerEmbed)
             await dummy_view._create_private_health_channel_for_user(
                 guild=message.guild,
                 user=message.author,
@@ -232,6 +232,8 @@ class HealthButlerDiscordBot(Client):
     # _start_health_server_threaded removed, handled in global scope for immediate effect
 
     async def on_ready(self):
+        global BOT_CONNECTED
+        BOT_CONNECTED = True
         logger.info(f"✅ Bot logged in as {self.user} (ID: {self.user.id})")
         logger.info(f"📡 Intents Status -> Message Content: {self.intents.message_content}, Guilds: {self.intents.guilds}, Messages: {self.intents.messages}")
         # Start proactive tasks (Phase 4 & 6)
@@ -444,7 +446,7 @@ class HealthButlerDiscordBot(Client):
 
                 # Wrapped callback for modal
                 async def on_submit_wrapper(interaction, data):
-                    await cmd._on_registration_modal_submit(interaction, data, HealthButlerEmbed)
+                    await cmd._on_registration_modal_submit(interaction, data, HealthButlerEmbed, bot=self)
 
                 view = NewUserGuideView(
                     on_registration_submit=on_submit_wrapper,
@@ -464,6 +466,13 @@ class HealthButlerDiscordBot(Client):
 
         if message.content.strip().lower() == "/settings":
             await cmd.handle_settings_command(message)
+            return
+
+        # /fitness command with optional category
+        if message.content.strip().lower().startswith("/fitness"):
+            content = message.content.strip().lower().replace("/fitness", "").strip()
+            category = content if content else None
+            await cmd.handle_fitness_command(message, HealthButlerEmbed, category)
             return
 
         if message.content.strip().lower() == "/help":
@@ -715,6 +724,16 @@ class HealthButlerDiscordBot(Client):
                         await channel.send(embed=embed, view=view)
                     else:
                         await channel.send(embed=embed)
+
+                    # Proactive: Suggest workout if high-cal/fried food detected (suggest_fitness_transfer=True)
+                    if scan_mode and data.get("suggest_fitness_transfer"):
+                        from src.discord_bot.views import FitnessPromptView
+                        prompt_msg = (
+                            "🍔 *This meal is a bit heavy. Would you like to plan a workout to balance it out?*"
+                        )
+                        fitness_view = FitnessPromptView(self, str(interaction_user_id), data)
+                        await channel.send(prompt_msg, view=fitness_view)
+
                 elif "summary" in data and ("recommendations" in data or "exercises" in data):
                     user_profile = pu.get_user_profile(str(interaction_user_id))
                     display_name = user_profile.get("name") or "User"

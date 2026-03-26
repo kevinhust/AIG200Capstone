@@ -1,13 +1,6 @@
 name: Deploy Discord Bot to Cloud Run
 
 on:
-  push:
-    branches: [main, Kevin]
-    paths:
-      - src/**
-      - requirements_deploy.txt
-      - Dockerfile
-      - .github/workflows/deploy-bot.yml
   workflow_dispatch:
 
 env:
