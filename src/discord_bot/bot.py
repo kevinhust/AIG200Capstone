@@ -16,15 +16,24 @@ sys.stderr.reconfigure(line_buffering=True)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("bot_pre_init")
 
+# Shared state for health check
+BOT_CONNECTED = False
+
 def _start_immediate_health_server():
     """Minimal HTTP server for Cloud Run health checks running in a thread."""
     class HealthHandler(BaseHTTPRequestHandler):
         def do_GET(self):
             if self.path == '/health' or self.path == '/':
+                # If bot failed to connect after 2 minutes, start reporting failure
+                if not BOT_CONNECTED:
+                    # We still return 200 initially to allow Cloud Run to start, 
+                    # but we could return 503 eventually. For now, we'll just log.
+                    pass
                 self.send_response(200)
                 self.send_header('Content-type', 'text/plain')
                 self.end_headers()
-                self.wfile.write(b"OK")
+                status = "ONLINE" if BOT_CONNECTED else "STARTING"
+                self.wfile.write(f"OK - {status}".encode())
             else:
                 self.send_response(404)
                 self.end_headers()
@@ -54,7 +63,11 @@ try:
     from datetime import datetime, time
     from src.swarm import HealthSwarm
     from src.discord_bot.embed_builder import HealthButlerEmbed
-    from src.discord_bot.views import RegistrationViewA, OnboardingGreetingView, NewUserGuideView
+    from src.discord_bot.views import (
+        RegistrationViewA, OnboardingGreetingView, NewUserGuideView,
+        LogWorkoutView, MealLogView, NutritionHandoffView, OverTargetPromptView
+    )
+    from src.discord_bot.roulette_view import MealInspirationView
     from src.agents.engagement.engagement_agent import EngagementAgent
     from src.agents.analytics.analytics_agent import AnalyticsAgent
     from src.discord_bot.profile_db import get_profile_db
@@ -76,7 +89,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Environment variables
-DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN") or os.getenv("DISCORD_BOT_TOKEN")
 DISCORD_ACTIVITY = os.getenv("DISCORD_ACTIVITY", "Helping with nutrition & fitness")
 
 
@@ -130,24 +143,97 @@ class HealthButlerDiscordBot(Client):
             self.nightly_summary.start()
 
     async def _send_proactive_message(self, user_id: str, embed: discord.Embed, view: Optional[discord.ui.View] = None):
-        """Helper to send proactive DM to user if allowed."""
+        """Helper to send proactive message to private channel or DM (v7.1 Hybrid)."""
         try:
             profile = pu.get_user_profile(user_id)
             # Check privacy toggle
             prefs = profile.get("preferences", {})
+            if not prefs:
+                prefs = profile.get("preferences_json", {})
+                
             if not prefs.get("allow_proactive_notifications", True):
                 return
 
-            user = await self.fetch_user(int(user_id))
-            if user:
-                await user.send(embed=embed, view=view)
-                logger.info(f"📬 Sent proactive message to {user.display_name}")
+            channel_id = prefs.get("private_channel_id")
+            sent_successfully = False
+
+            # 1. Try sending to Private Channel (Primary)
+            if channel_id:
+                try:
+                    # Search in cache first
+                    channel = self.get_channel(int(channel_id))
+                    if not channel:
+                        channel = await self.fetch_channel(int(channel_id))
+                    
+                    if channel and isinstance(channel, discord.abc.Messageable):
+                        await channel.send(embed=embed, view=view)
+                        logger.info(f"📬 Sent proactive message to private channel {channel_id} for user {user_id}")
+                        sent_successfully = True
+                except Exception as channel_err:
+                    logger.warning(f"Failed to send to private channel {channel_id}: {channel_err}. Falling back to DM.")
+
+            # 2. Fallback to DM (Secondary)
+            if not sent_successfully:
+                user = await self.fetch_user(int(user_id))
+                if user:
+                    try:
+                        await user.send(embed=embed, view=view)
+                        logger.info(f"📬 Sent proactive DM fallback to {user.display_name}")
+                        sent_successfully = True
+                    except discord.Forbidden:
+                        logger.error(f"❌ Could not send DM to {user_id} (DMs closed/Blocked)")
+                    except Exception as dm_err:
+                        logger.error(f"❌ Failed to send DM to {user_id}: {dm_err}")
         except Exception as e:
             logger.error(f"Failed to send proactive message to {user_id}: {e}")
+
+    async def _force_sync_private_channel(self, message: discord.Message):
+        """Manually trigger private channel creation from a message. (v7.1)"""
+        if not message.guild:
+            await message.reply("⚠️ This command can only be used within the server, not in DMs.")
+            return
+
+        user_id = str(message.author.id)
+        profile = pu.get_user_profile(user_id)
+        
+        # 1. Verify if channel already exists in preferences
+        prefs = profile.get("preferences_json", {})
+        existing_id = prefs.get("private_channel_id")
+        if existing_id:
+            channel = self.get_channel(int(existing_id))
+            if not channel:
+                try: 
+                    channel = await self.fetch_channel(int(existing_id))
+                except: 
+                    channel = None
+                    
+            if channel:
+                await message.reply(f"🔗 You already have a private channel: <#{existing_id}>")
+                return
+
+        # 2. Trigger creation via RegistrationViewB helper
+        from src.discord_bot.views import RegistrationViewB
+        from src.discord_bot.embed_builder import HealthButlerEmbed
+        
+        await message.reply("🔄 *Syncing your private health channel...*")
+        
+        try:
+            # We instantiate the view just to use its helper method
+            dummy_view = RegistrationViewB(self, user_id, profile, HealthButlerEmbed)
+            await dummy_view._create_private_health_channel_for_user(
+                guild=message.guild,
+                user=message.author,
+                feedback_channel=message.channel
+            )
+        except Exception as e:
+            logger.error(f"Sync error: {e}")
+            await message.reply(f"❌ Failed to sync: {str(e)}")
 
     # _start_health_server_threaded removed, handled in global scope for immediate effect
 
     async def on_ready(self):
+        global BOT_CONNECTED
+        BOT_CONNECTED = True
         logger.info(f"✅ Bot logged in as {self.user} (ID: {self.user.id})")
         logger.info(f"📡 Intents Status -> Message Content: {self.intents.message_content}, Guilds: {self.intents.guilds}, Messages: {self.intents.messages}")
         # Start proactive tasks (Phase 4 & 6)
@@ -338,12 +424,20 @@ class HealthButlerDiscordBot(Client):
 
         # Phase 6.1/6.2: Premium "Cold Start" Onboarding Hook
         greetings = ["hi", "hello", "你好", "start", "hey", "👋"]
-        if content_lower in greetings or content_lower == "/setup":
-            logger.info(f"👋 Greeting detected from {message.author}: {content_lower}")
+        if content_lower in greetings or content_lower == "/setup" or content_lower == "/sync":
+            logger.info(f"👋 Greeting or sync detected from {message.author}: {content_lower}")
             profile = pu.get_user_profile(author_id)
             onboarding_done = profile.get("preferences", {}).get("onboarding_completed", False)
             if not onboarding_done and "preferences_json" in profile:
                 onboarding_done = profile.get("preferences_json", {}).get("onboarding_completed", False)
+
+            # 1. /sync Hook: Specifically for manual channel recovery
+            if content_lower == "/sync":
+                if not onboarding_done:
+                    await message.reply("⚠️ You haven't completed your profile yet! Please type `/setup` first.")
+                    return
+                await self._force_sync_private_channel(message)
+                return
 
             # /setup always triggers it, 'hi' only for new users
             if not onboarding_done or content_lower == "/setup":
@@ -352,7 +446,7 @@ class HealthButlerDiscordBot(Client):
 
                 # Wrapped callback for modal
                 async def on_submit_wrapper(interaction, data):
-                    await cmd._on_registration_modal_submit(interaction, data, HealthButlerEmbed)
+                    await cmd._on_registration_modal_submit(interaction, data, HealthButlerEmbed, bot=self)
 
                 view = NewUserGuideView(
                     on_registration_submit=on_submit_wrapper,
@@ -372,6 +466,13 @@ class HealthButlerDiscordBot(Client):
 
         if message.content.strip().lower() == "/settings":
             await cmd.handle_settings_command(message)
+            return
+
+        # /fitness command with optional category
+        if message.content.strip().lower().startswith("/fitness"):
+            content = message.content.strip().lower().replace("/fitness", "").strip()
+            category = content if content else None
+            await cmd.handle_fitness_command(message, HealthButlerEmbed, category)
             return
 
         if message.content.strip().lower() == "/help":
@@ -623,6 +724,16 @@ class HealthButlerDiscordBot(Client):
                         await channel.send(embed=embed, view=view)
                     else:
                         await channel.send(embed=embed)
+
+                    # Proactive: Suggest workout if high-cal/fried food detected (suggest_fitness_transfer=True)
+                    if scan_mode and data.get("suggest_fitness_transfer"):
+                        from src.discord_bot.views import FitnessPromptView
+                        prompt_msg = (
+                            "🍔 *This meal is a bit heavy. Would you like to plan a workout to balance it out?*"
+                        )
+                        fitness_view = FitnessPromptView(self, str(interaction_user_id), data)
+                        await channel.send(prompt_msg, view=fitness_view)
+
                 elif "summary" in data and ("recommendations" in data or "exercises" in data):
                     user_profile = pu.get_user_profile(str(interaction_user_id))
                     display_name = user_profile.get("name") or "User"

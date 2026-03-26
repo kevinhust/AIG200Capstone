@@ -205,7 +205,12 @@ class RegistrationViewA(ui.View):
     Step 2/3: Biological Profile & Goals (v4.1 Mobile Optimized).
     Collects Sex, Goal, and Activity Level to calculate TDEE.
     """
-    def __init__(self, user_id: str, profile_buffer: Dict[str, Any], embed_factory):
+    def __init__(self, bot, user_id: str, profile_buffer: Dict[str, Any], embed_factory):
+        super().__init__(timeout=600)
+        self.bot = bot
+        self.user_id = user_id
+        self.profile_buffer = profile_buffer
+        self.embed_factory = embed_factory
         super().__init__(timeout=600)
         self.user_id = user_id
         self.profile_buffer = profile_buffer # Reference to _demo_user_profile[user_id]
@@ -334,7 +339,7 @@ class RegistrationViewA(ui.View):
             
             await interaction.response.edit_message(
                 embed=embed,
-                view=RegistrationViewB(self.user_id, self.profile_buffer, self.embed_factory)
+                view=RegistrationViewB(self.bot, self.user_id, self.profile_buffer, self.embed_factory)
             )
             await interaction.followup.send(
                 f"✅ **Base profile calibrated!** Your target is approximately **{int(tdee)} kcal**/day.",
@@ -379,13 +384,116 @@ class ConditionModal(ui.Modal, title='Manual Chronic Issue Entry'):
     async def on_submit(self, interaction: discord.Interaction):
         await self.on_submit_callback(interaction, self.other_condition.value)
 
+
+class OnboardingFitnessPromptView(discord.ui.View):
+    """
+    Prompt user to create a fitness plan after onboarding completion.
+    Shown once after RegistrationViewB finishes.
+    """
+    def __init__(self, bot, user_id: str, profile: Dict[str, Any], embed_factory):
+        super().__init__(timeout=600)
+        self.bot = bot
+        self.user_id = user_id
+        self.profile = profile
+        self.embed_factory = embed_factory
+
+    @discord.ui.button(label="Create Fitness Plan", style=discord.ButtonStyle.blurple, emoji="🏃")
+    async def create_plan(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if str(interaction.user.id) != self.user_id:
+            return await interaction.response.send_message("This is for someone else.", ephemeral=True)
+
+        # Disable buttons
+        for child in self.children:
+            child.disabled = True
+        await interaction.message.edit(view=self)
+
+        await interaction.response.send_message("🏃 *Creating your personalized fitness plan...*", ephemeral=True)
+
+        try:
+            from src.agents.fitness.fitness_agent import FitnessAgent
+            import asyncio
+            import json
+
+            agent = FitnessAgent()
+            goal = self.profile.get("goal", "maintain")
+            conditions = self.profile.get("conditions", [])
+
+            # Build goal-specific task
+            task = f"Create a {goal} workout plan for me. Consider my health conditions: {conditions if conditions else 'None'}."
+
+            context = [{"type": "user_context", "content": json.dumps({"user_id": self.user_id})}]
+
+            # Execute fitness agent
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    result_str = await asyncio.to_thread(agent.execute, task, context)
+                else:
+                    result_str = loop.run_until_complete(agent.execute_async(task, context))
+            except RuntimeError:
+                result_str = await agent.execute_async(task, context)
+
+            # Parse response
+            try:
+                result = json.loads(result_str)
+            except:
+                cleaned = result_str.strip()
+                if "```json" in cleaned:
+                    cleaned = cleaned.split("```json")[-1].split("```")[0].strip()
+                elif "```" in cleaned:
+                    cleaned = cleaned.split("```")[-1].split("```")[0].strip()
+                try:
+                    result = json.loads(cleaned)
+                except:
+                    result = {"summary": result_str[:500], "recommendations": []}
+
+            # Build and send embed
+            from src.discord_bot.embed_builder import HealthButlerEmbed
+            embed = HealthButlerEmbed.build_fitness_card(
+                data=result,
+                user_name=self.profile.get("name", "User"),
+                budget_progress=result.get("budget_progress"),
+                empathy_strategy=result.get("empathy_strategy"),
+                user_habits=result.get("user_habits")
+            )
+
+            from src.discord_bot.views import LogWorkoutView
+            view = LogWorkoutView(bot=self.bot, data=result, user_id=self.user_id)
+
+            await interaction.followup.send(
+                "✅ **Your Fitness Plan is Ready!**",
+                embed=embed,
+                view=view,
+                ephemeral=False
+            )
+
+        except Exception as e:
+            logger.error(f"Error creating onboarding fitness plan: {e}")
+            await interaction.followup.send("⚠️ Failed to create fitness plan. Use `/fitness` anytime to get one.", ephemeral=True)
+
+    @discord.ui.button(label="Maybe Later", style=discord.ButtonStyle.gray, emoji="⏭️")
+    async def later(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if str(interaction.user.id) != self.user_id:
+            return await interaction.response.send_message("This is for someone else.", ephemeral=True)
+
+        for child in self.children:
+            child.disabled = True
+        await interaction.message.edit(view=self)
+
+        await interaction.response.send_message(
+            "👌 No problem! Use `/fitness` anytime to get a workout plan, or just upload a meal photo and I'll suggest exercises if needed.",
+            ephemeral=True
+        )
+
+
 class RegistrationViewB(ui.View):
     """
     Step 3/3: Safety & Allergies (v4.1).
     Collects Allergies and Health Conditions, then persists to Supabase.
     """
-    def __init__(self, user_id: str, profile_buffer: Dict[str, Any], embed_factory):
+    def __init__(self, bot, user_id: str, profile_buffer: Dict[str, Any], embed_factory):
         super().__init__(timeout=600)
+        self.bot = bot
         self.user_id = user_id
         self.profile_buffer = profile_buffer
         self.embed_factory = embed_factory
@@ -525,10 +633,18 @@ class RegistrationViewB(ui.View):
             )
             embed.set_footer(text="🛡️ BR-001: Medical Disclaimer - Not a substitute for professional advice.")
 
-            # Standard v3.0 buttons like 'Log Meal' would go in a new View, but for now we finish.
+            # Show fitness plan prompt after onboarding
+            from src.discord_bot.views import OnboardingFitnessPromptView
+            fitness_view = OnboardingFitnessPromptView(
+                bot=self.bot,
+                user_id=self.user_id,
+                profile=self.profile_buffer,
+                embed_factory=self.embed_factory
+            )
+
             await interaction.response.edit_message(
                 embed=embed,
-                view=None
+                view=fitness_view
             )
 
             await interaction.followup.send("🚀 **Profile Activated!** You are all set.", ephemeral=True)
@@ -544,19 +660,28 @@ class RegistrationViewB(ui.View):
                 await interaction.followup.send("⚠️ Error saving profile. Please contact support.", ephemeral=True)
 
     async def _create_private_health_channel(self, interaction: discord.Interaction):
-        """
-        v6.4: Create a private channel for daily health logging.
+        """Wrapper for interaction-based channel creation."""
+        await self._create_private_health_channel_for_user(
+            guild=interaction.guild,
+            user=interaction.user,
+            feedback_channel=interaction.followup if hasattr(interaction, 'followup') else interaction.channel
+        )
 
-        Creates a private text channel accessible only by the user and bot,
-        then sends a welcome message with quick-start instructions.
+    async def _create_private_health_channel_for_user(self, guild: Optional[discord.Guild], user: discord.User, feedback_channel: Any):
+        """
+        Core logic to create a private channel for daily health logging. (v7.1 Refactored)
         """
         try:
-            guild = interaction.guild
             if not guild:
                 logger.warning("Cannot create private channel: no guild context")
+                if hasattr(feedback_channel, 'send'):
+                    await feedback_channel.send(
+                        "💾 **Profile Saved!** Since we are in a Direct Message, I couldn't create a private channel for you in the server.\n\n"
+                        "👉 **Action Required**: Please go to the **Health Butler Server** and type `/sync` to create your private health channel there!",
+                        ephemeral=True if hasattr(feedback_channel, 'ephemeral') else False
+                    )
                 return
 
-            user = interaction.user
             base_name = user.display_name.lower().replace(' ', '-')
             channel_name = f"health-{base_name}"[:27]
 
@@ -566,8 +691,10 @@ class RegistrationViewB(ui.View):
                 logger.info(f"Private channel already exists for user {user.id}")
                 await existing.send(
                     f"👋 Welcome back, **{user.display_name}**! "
-                    f"Your profile has been updated. Ready to log your health journey!"
+                    f"Your health dashboard is ready."
                 )
+                if hasattr(feedback_channel, 'send'):
+                    await feedback_channel.send(f"🔗 Your private channel already exists: <#{existing.id}>", ephemeral=True)
                 return
 
             # Create private channel with specific permissions
@@ -576,7 +703,6 @@ class RegistrationViewB(ui.View):
                 guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True),
                 user: discord.PermissionOverwrite(read_messages=True, send_messages=True)
             }
-
 
             # Try to find or create a "Health Channels" category
             category = discord.utils.get(guild.categories, name="Health Channels")
@@ -590,8 +716,6 @@ class RegistrationViewB(ui.View):
                     logger.warning(f"Could not create category: {cat_err}")
                     category = None
 
-
-
             # Create the private channel
             private_channel = await guild.create_text_channel(
                 channel_name,
@@ -600,7 +724,6 @@ class RegistrationViewB(ui.View):
                 topic=f"Private health logging for {user.display_name}",
                 reason=f"Private health channel for {user.display_name}"
             )
-
 
             logger.info(f"Created private channel {private_channel.name} for user {user.id}")
 
@@ -656,24 +779,27 @@ class RegistrationViewB(ui.View):
 
 
             # Notify user in the original channel
-            await interaction.followup.send(
-                f"🔒 **Private channel created!** Check out <#{private_channel.id}> for daily logging.",
-                ephemeral=True
-            )
+            if hasattr(feedback_channel, 'send'):
+                await feedback_channel.send(
+                    f"🔒 **Private channel created!** Check out <#{private_channel.id}> for daily logging.",
+                    ephemeral=True if hasattr(feedback_channel, 'ephemeral') else False
+                )
         except discord.Forbidden:
             logger.warning("Bot lacks permissions to create private channels")
-            await interaction.followup.send(
-                "⚠️ Could not create private channel (missing permissions). "
-                "You can still use DMs for private logging!",
-                ephemeral=True
-            )
+            if hasattr(feedback_channel, 'send'):
+                await feedback_channel.send(
+                    "⚠️ Could not create private channel (missing permissions). "
+                    "You can still use DMs for private logging!",
+                    ephemeral=True if hasattr(feedback_channel, 'ephemeral') else False
+                )
         except Exception as e:
             logger.error(f"Error creating private channel: {e}")
-            await interaction.followup.send(
-                "⚠️ Could not create private channel, but your profile is saved! "
-                "Use DMs for private health logging.",
-                ephemeral=True
-            )
+            if hasattr(feedback_channel, 'send'):
+                await feedback_channel.send(
+                    "⚠️ Could not create private channel, but your profile is saved! "
+                    "Use DMs for private health logging.",
+                    ephemeral=True if hasattr(feedback_channel, 'ephemeral') else False
+                )
 class SettingsView(discord.ui.View):
     """View for managing user notification settings."""
     def __init__(self, user_id: str, profile: Dict[str, Any]):
@@ -868,6 +994,67 @@ class MealServingAdjustModal(discord.ui.Modal, title="Adjust Serving"):
 
         dish_override = str(getattr(self.dish_name, "value", "") or "").strip()
         await self._view.apply_multiplier(interaction, m, dish_override=dish_override or None)
+
+
+class FitnessPromptView(discord.ui.View):
+    """
+    Proactive prompt to suggest workout after high-calorie meal.
+    Shown when suggest_fitness_transfer=True (high cal/fried food detected).
+    """
+    def __init__(self, bot: 'HealthButlerDiscordBot', user_id: str, nutrition_payload: Dict[str, Any]):
+        super().__init__(timeout=600)
+        self.bot = bot
+        self.user_id = str(user_id)
+        self.nutrition_payload = nutrition_payload
+
+    @discord.ui.button(label="Yes, let's work out!", style=discord.ButtonStyle.blurple, emoji="🏃")
+    async def on_yes(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if str(interaction.user.id) != self.user_id:
+            return await interaction.response.send_message("This is for someone else.", ephemeral=True)
+
+        await interaction.response.send_message("🏃 *Great choice! Consulting Fitness Agent...*", ephemeral=True)
+
+        try:
+            from src.discord_bot.profile_utils import get_user_profile
+            profile = get_user_profile(self.user_id)
+            user_context = {
+                "user_id": self.user_id,
+                "name": profile.get("name", "User"),
+                "conditions": profile.get("conditions", []),
+                "nutrition_summary": json.dumps(self.nutrition_payload)
+            }
+
+            from src.swarm import handoff_to_fitness
+            handoff_signal = handoff_to_fitness()
+
+            result = await self.bot.swarm.execute_async(
+                user_input=f"{handoff_signal}: I just had a meal. Can you suggest an appropriate workout?",
+                user_context=user_context
+            )
+
+            await self.bot._send_swarmed_response(
+                interaction.channel,
+                result.get("response", "{}"),
+                self.user_id,
+                scan_mode=False
+            )
+
+            for child in self.children:
+                child.disabled = True
+            await interaction.message.edit(view=self)
+
+        except Exception as e:
+            logger.error(f"Error in FitnessPrompt: {e}")
+            await interaction.followup.send("❌ Error fetching workout plan. Try again later.", ephemeral=True)
+
+    @discord.ui.button(label="Not now", style=discord.ButtonStyle.gray, emoji="🚫")
+    async def on_no(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if str(interaction.user.id) != self.user_id:
+            return await interaction.response.send_message("This is for someone else.", ephemeral=True)
+        for child in self.children:
+            child.disabled = True
+        await interaction.response.edit_message(content="👌 Got it! Let me know if you need a workout later.", view=self)
+
 
 class OverTargetPromptView(discord.ui.View):
     def __init__(self, bot: 'HealthButlerDiscordBot', user_id: str, nutrition_payload: Dict[str, Any]):
