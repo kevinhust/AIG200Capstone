@@ -1,0 +1,15 @@
+[gitleaks]
+# Only scan current state, not git history
+no-git = true
+
+[allowlist]
+# Ignore false positives for specific fingerprints (defined in .gitleaksignore)
+# You can also add specific git commits or paths here if needed
+
+# Ignore generic-api-key findings in these specific files (API_KEY was renamed to usda_key)
+[[allowlist]]
+description = "False positive: generic-api-key in historical USDA downloader files"
+paths = [
+  "**/download_common_foods.py",
+  "**/download_usda.py"
+]

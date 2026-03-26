@@ -202,6 +202,68 @@ async def handle_help_command(message: discord.Message, HealthButlerEmbed):
     await message.reply(embed=embed)
 
 
+async def handle_routine_command(message: discord.Message):
+    """📋 View user's current workout routine"""
+    user_id = str(message.author.id)
+    profile = pu.get_user_profile(user_id)
+
+    if not profile or not profile.get("name"):
+        await message.reply("⚠️ You don't have a profile yet. Run `/demo` to set up first.")
+        return
+
+    try:
+        from src.discord_bot.profile_db import get_profile_db
+        db = get_profile_db()
+
+        if not db:
+            await message.reply("⚠️ Database not connected.")
+            return
+
+        progress = db.get_workout_progress(user_id, days=30)
+        routine_exercises = progress.get("routine_exercises", [])
+        routine_count = progress.get("routine_count", 0)
+
+        if not routine_exercises:
+            embed = discord.Embed(
+                title="📋 Your Workout Routine",
+                description="No exercises in your routine yet.\n\nUse `/fitness` to get recommendations and add them!",
+                color=discord.Color.blue()
+            )
+            embed.add_field(
+                name="💡 Tip",
+                value="Click '📌 Add To Routine' on any workout recommendation to save it here.",
+                inline=False
+            )
+        else:
+            exercise_list = "\n".join([f"• **{ex}**" for ex in routine_exercises])
+            embed = discord.Embed(
+                title="📋 Your Workout Routine",
+                description=f"You have **{routine_count}** exercise(s) in your routine.",
+                color=discord.Color.green()
+            )
+            embed.add_field(
+                name="Weekly Exercises",
+                value=exercise_list,
+                inline=False
+            )
+            embed.add_field(
+                name="🎯 Target",
+                value="~3 sessions per week for each exercise",
+                inline=False
+            )
+            embed.add_field(
+                name="📊 This Week",
+                value=f"Completed: **{progress.get('completed_count', 0)}**\nTotal active: **{progress.get('total_minutes', 0)}** min",
+                inline=False
+            )
+
+        await message.reply(embed=embed)
+
+    except Exception as e:
+        logger.error(f"Error in /routine command: {e}")
+        await message.reply(f"⚠️ Failed to load routine: {str(e)[:100]}")
+
+
 async def handle_fitness_command(
     message: discord.Message,
     HealthButlerEmbed,

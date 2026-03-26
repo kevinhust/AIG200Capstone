@@ -774,6 +774,10 @@ class RegistrationViewB(ui.View):
             prefs["private_channel_id"] = str(private_channel.id)
             db.update_profile(self.user_id, preferences_json=prefs)
 
+            # Update in-memory cache so proactive messages find the new private_channel_id
+            if self.user_id in pu._user_profiles_cache:
+                pu._user_profiles_cache[self.user_id]["preferences_json"] = prefs
+                pu._user_profiles_cache[self.user_id]["preferences"] = prefs
 
             logger.info(f"[Onboarding] Stored private channel ID for user {self.user_id}")
 
@@ -892,18 +896,54 @@ class LogWorkoutView(ui.View):
 
     @ui.button(label='Add To Routine', style=discord.ButtonStyle.blurple, emoji='📌')
     async def add_to_routine(self, interaction: discord.Interaction, button: ui.Button):
-        await interaction.response.send_message("📌 Added to your weekly routine!", ephemeral=True)
+        if str(interaction.user.id) != self.user_id:
+            return await interaction.response.send_message("This is for someone else!", ephemeral=True)
+
+        try:
+            from src.discord_bot.profile_db import get_profile_db
+            db = get_profile_db()
+
+            # Add primary exercise to routine
+            exercise = self._primary_exercise()
+            exercise_name = exercise.get("name", "Exercise")
+            result = db.add_routine_exercise(
+                discord_user_id=self.user_id,
+                exercise_name=exercise_name,
+                target_per_week=3,
+                metadata={
+                    "duration_min": exercise.get("duration_min", 20),
+                    "kcal_estimate": exercise.get("kcal_estimate", 80),
+                    "source": "fitness_card",
+                }
+            )
+
+            if result:
+                await interaction.response.send_message(
+                    f"📌 **{exercise_name}** added to your weekly routine!",
+                    ephemeral=True
+                )
+            else:
+                await interaction.response.send_message(
+                    f"📌 **{exercise_name}** added to your routine (check completed count).",
+                    ephemeral=True
+                )
+        except Exception as e:
+            logger.warning(f"Failed to add to routine: {e}")
+            await interaction.response.send_message(
+                "⚠️ Could not add to routine. Try again later.",
+                ephemeral=True
+            )
 
     @ui.button(label='View Progress', style=discord.ButtonStyle.gray, emoji='📈')
     async def view_progress(self, interaction: discord.Interaction, button: ui.Button):
         if str(interaction.user.id) != self.user_id:
             return await interaction.response.send_message("This is for someone else!", ephemeral=True)
-            
+
         try:
             from src.discord_bot.profile_db import get_profile_db
             db = get_profile_db()
             progress = db.get_workout_progress(self.user_id, days=7)
-            
+
             msg = (
                 "📈 **7-Day Progress**\n"
                 f"• Suggested: **{progress.get('recommended_count', 0)}**\n"
@@ -915,6 +955,33 @@ class LogWorkoutView(ui.View):
         except Exception as e:
             logger.warning(f"Failed to fetch progress: {e}")
             await interaction.response.send_message("⚠️ Could not load progress.", ephemeral=True)
+
+    @ui.button(label='View Routine', style=discord.ButtonStyle.gray, emoji='📋')
+    async def view_routine(self, interaction: discord.Interaction, button: ui.Button):
+        if str(interaction.user.id) != self.user_id:
+            return await interaction.response.send_message("This is for someone else!", ephemeral=True)
+
+        try:
+            from src.discord_bot.profile_db import get_profile_db
+            db = get_profile_db()
+            progress = db.get_workout_progress(self.user_id, days=7)
+
+            routine_exercises = progress.get("routine_exercises", [])
+            routine_count = progress.get("routine_count", 0)
+
+            if not routine_exercises:
+                msg = "📋 **Your Routine**\n\nNo exercises in your routine yet. Add some from recommendations!"
+            else:
+                exercise_list = "\n".join([f"• {ex}" for ex in routine_exercises])
+                msg = (
+                    f"📋 **Your Weekly Routine** ({routine_count} exercises)\n\n"
+                    f"{exercise_list}\n\n"
+                    f"Target: ~3 sessions per week each"
+                )
+            await interaction.response.send_message(msg, ephemeral=True)
+        except Exception as e:
+            logger.warning(f"Failed to fetch routine: {e}")
+            await interaction.response.send_message("⚠️ Could not load routine.", ephemeral=True)
 
     @ui.button(label='Safety Info', style=discord.ButtonStyle.red, emoji='🛡️')
     async def safety_info(self, interaction: discord.Interaction, button: ui.Button):

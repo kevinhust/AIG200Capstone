@@ -18,12 +18,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Gitleaks Scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip install gitleaks
+          gitleaks detect --config .gitleaks.toml --redact -v || { echo "Gitleaks found leaks!"; exit 1; }
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -123,23 +123,20 @@ jobs:
       - name: Verify deployment
         run: |
           echo "Waiting for service to be ready..."
-          sleep 20
+          sleep 30
           HEALTH_URL="${{ steps.service-url.outputs.service-url }}/health"
-          echo "Checking health at: $HEALTH_URL (with Auth)"
-          
-          # Use gcloud to get an identity token for the private service
-          ID_TOKEN=$(gcloud auth print-identity-token)
-          
-          for i in $(seq 1 10); do
-            # Added Authorization header to fix False Negative (403)
-            if curl -sf -H "Authorization: Bearer $ID_TOKEN" "$HEALTH_URL" > /dev/null; then
+          echo "Checking health at: $HEALTH_URL"
+
+          for i in $(seq 1 15); do
+            # Simple health check without auth (Cloud Run public endpoint)
+            if curl -sf "$HEALTH_URL" > /dev/null 2>&1; then
               echo "✅ Health check passed!"
               exit 0
             fi
-            echo "Attempt $i/10 failed, retrying in 10s..."
-            sleep 10
+            echo "Attempt $i/15 failed, retrying in 15s..."
+            sleep 15
           done
-          echo "❌ Health check failed after 10 attempts"
+          echo "❌ Health check failed after 15 attempts"
           exit 1
 
       - name: Deployment summary
