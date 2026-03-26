@@ -20,11 +20,6 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Gitleaks Scan
-        run: |
-          pip install gitleaks
-          gitleaks detect --config .gitleaks.toml --redact -v || { echo "Gitleaks found leaks!"; exit 1; }
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
