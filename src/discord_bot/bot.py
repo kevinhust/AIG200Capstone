@@ -65,7 +65,8 @@ try:
     from src.discord_bot.embed_builder import HealthButlerEmbed
     from src.discord_bot.views import (
         RegistrationViewA, OnboardingGreetingView, NewUserGuideView,
-        LogWorkoutView, MealLogView, NutritionHandoffView, OverTargetPromptView
+        LogWorkoutView, MealLogView, NutritionHandoffView, OverTargetPromptView,
+        FitnessPromptView, OnboardingFitnessPromptView
     )
     from src.discord_bot.roulette_view import MealInspirationView
     from src.agents.engagement.engagement_agent import EngagementAgent
@@ -145,11 +146,20 @@ class HealthButlerDiscordBot(Client):
     async def _send_proactive_message(self, user_id: str, embed: discord.Embed, view: Optional[discord.ui.View] = None):
         """Helper to send proactive message to private channel or DM (v7.1 Hybrid)."""
         try:
-            profile = pu.get_user_profile(user_id)
-            # Check privacy toggle
-            prefs = profile.get("preferences", {})
-            if not prefs:
-                prefs = profile.get("preferences_json", {})
+            # Always fetch fresh preferences from DB to ensure private_channel_id is current
+            # This fixes stale cache issue where private_channel_id wasn't being updated after /sync
+            prefs = {}
+            if pu.profile_db:
+                db_profile = pu.profile_db.get_profile(user_id)
+                if db_profile:
+                    prefs = db_profile.get("preferences_json") or {}
+                    # Write-through cache so other callers also get fresh data
+                    if user_id in pu._user_profiles_cache:
+                        pu._user_profiles_cache[user_id]["preferences"] = prefs
+                        pu._user_profiles_cache[user_id]["preferences_json"] = prefs
+            else:
+                profile = pu.get_user_profile(user_id)
+                prefs = profile.get("preferences", profile.get("preferences_json", {}))
                 
             if not prefs.get("allow_proactive_notifications", True):
                 return
@@ -243,6 +253,8 @@ class HealthButlerDiscordBot(Client):
             self.nightly_summary.start()
         if not self.pre_meal_reminder.is_running():
             self.pre_meal_reminder.start()
+        if not self.evening_exercise_reminder.is_running():
+            self.evening_exercise_reminder.start()
 
     @tasks.loop(time=time(8, 0, tzinfo=pu.LOCAL_TZ))
     async def morning_checkin(self):
@@ -321,9 +333,70 @@ class HealthButlerDiscordBot(Client):
             except Exception as e:
                 logger.error(f"Error in pre_meal_reminder for {user_id}: {e}")
 
+    @tasks.loop(time=time(20, 0, tzinfo=pu.LOCAL_TZ))
+    async def evening_exercise_reminder(self):
+        """🍽️ Evening exercise reminder after dinner (20:00)."""
+        logger.info("🏃 Running scheduled evening exercise reminder...")
+
+        for user_id in list(pu._user_profiles_cache.keys()):
+            try:
+                profile = pu.get_user_profile(user_id)
+                if not profile or not profile.get("name"):
+                    continue
+
+                # Check if user has had a high-calorie meal today
+                stats = pu.profile_db.get_today_stats(user_id) if pu.profile_db else {"total_calories": 0}
+                target = pu.calculate_daily_target(profile)
+                calorie_status = ""
+
+                if stats["total_calories"] > target * 0.8:
+                    calorie_status = "over 80% of daily calories consumed"
+                elif pu.profile_db:
+                    meals = pu.profile_db.get_meals(user_id, limit=3)
+                    for meal in meals:
+                        if meal.get("calories", 0) > 500:
+                            calorie_status = "had a heavy meal"
+                            break
+
+                embed = discord.Embed(
+                    title="🏃 Time to Move!",
+                    description=(
+                        f"Hey **{profile.get('name', 'there')}**! 👋\n\n"
+                        f"It's been a full day. Did you get a chance to work out?\n\n"
+                        f"If not, how about a quick session now? Even a short walk or stretching can help!"
+                    ),
+                    color=discord.Color.blue()
+                )
+
+                # Add context if we detected heavy eating
+                if calorie_status:
+                    embed.add_field(
+                        name="💡 Context",
+                        value=f"I noticed you {calorie_status}. A quick workout would help balance things out!",
+                        inline=False
+                    )
+
+                embed.add_field(
+                    name="🎯 Quick Options",
+                    value=(
+                        "• **15-min Yoga** - Relax and stretch\n"
+                        "• **20-min Walk** - Light cardio\n"
+                        "• **10-min HIIT** - Quick energy burn\n\n"
+                        "Type `/fitness` to get a personalized plan!"
+                    ),
+                    inline=False
+                )
+
+                embed.set_footer(text="Every step counts! 🚶")
+
+                await self._send_proactive_message(user_id, embed)
+            except Exception as e:
+                logger.error(f"Error in evening_exercise_reminder for {user_id}: {e}")
+
     @morning_checkin.before_loop
     @nightly_summary.before_loop
     @pre_meal_reminder.before_loop
+    @evening_exercise_reminder.before_loop
     async def before_loops(self):
         await self.wait_until_ready()
 
@@ -473,6 +546,11 @@ class HealthButlerDiscordBot(Client):
             content = message.content.strip().lower().replace("/fitness", "").strip()
             category = content if content else None
             await cmd.handle_fitness_command(message, HealthButlerEmbed, category)
+            return
+
+        # /routine command to view workout routine
+        if message.content.strip().lower() == "/routine":
+            await cmd.handle_routine_command(message)
             return
 
         if message.content.strip().lower() == "/help":

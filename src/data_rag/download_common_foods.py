@@ -10,7 +10,7 @@ import requests
 from pathlib import Path
 import os
 
-API_KEY = os.getenv("USDA_API_KEY", "DEMO_KEY")
+usda_key = os.getenv("USDA_API_KEY", "")
 BASE_URL = "https://api.nal.usda.gov/fdc/v1/foods/search"
 
 # Common everyday foods by category
@@ -64,7 +64,7 @@ def search_food(query: str) -> dict | None:
     """Search USDA for a food item."""
     # Try without dataType filter first (simpler, more reliable)
     params = {
-        "api_key": API_KEY,
+        "api_key": usda_key,
         "query": query,
         "pageSize": 1
     }

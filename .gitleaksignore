@@ -1,0 +1,6 @@
+# Ignore historical USDA API key leaks that have been revoked.
+# These keys are no longer valid and exist only in history.
+d69f74a7e3d086b36081f9ab9f8799de0c0bb286:health_butler/data_rag/download_common_foods.py:generic-api-key:12
+d69f74a7e3d086b36081f9ab9f8799de0c0bb286:health_butler/data_rag/download_usda.py:generic-api-key:12
+87f0c408d8413f836ac3755e0ed375d63c5c222e:health_butler/data_rag/download_common_foods.py:generic-api-key:12
+87f0c408d8413f836ac3755e0ed375d63c5c222e:health_butler/data_rag/download_usda.py:generic-api-key:12
