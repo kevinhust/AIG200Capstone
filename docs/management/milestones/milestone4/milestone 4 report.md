@@ -1,5 +1,6 @@
 # Milestone 4 Report: Near-Complete System & Deployment (v10.0)
 **Date:** 2026-03-27
+**Team:** Group 5 (Allen, Wangchuk, Aziz, Kevin)
 **Status:** Live Deployment with Full Fitness Integration ✅
 
 ## 1. Executive Summary: Near-Complete System Reality
@@ -122,7 +123,21 @@ Four daily scheduled reminders ensure consistent user engagement:
 4. **Project Handover**: Complete `ARCHITECTURE.md` and `USER_GUIDE.md`.
 5. **Presentation Prep**: Final demo rehearsal and slide preparation.
 
-## 6. Architecture Diagram (v10.0 Hybrid Model)
+## 6. Team & Roles
+
+### Team Members
+| Member | Role | Contributions |
+|--------|------|---------------|
+| **Allen** | Orchestration & Integration | Coordinator Agent, HealthSwarm |
+| **Wangchuk** | CV & UI | Vision Pipeline, YOLO11, Embed Builder |
+| **Aziz** | Data & RAG | USDA RAG Pipeline, Supabase |
+| **Kevin** | Fitness & DevOps | Fitness Agent, Discord Bot, CI/CD, Deployment |
+
+### Role Evolution
+- **Allen, Wangchuk, Aziz**: Continued development on core agent logic and data pipelines
+- **Kevin**: Led Discord bot development, fitness features, and Cloud Run deployment
+
+## 7. Architecture Diagram (v10.0 Hybrid Model)
 
 ```mermaid
 graph TD
@@ -156,6 +171,6 @@ graph TD
 ```
 
 ---
-**Prepared by:** AI Capstone Team
+**Prepared by:** Group 5 - Allen, Wangchuk, Aziz, Kevin
 **Milestone:** 4 (Week 11)
 **Next Review:** Final Presentation (Week 12)
