@@ -1,8 +1,8 @@
 # Milestone 3 → Milestone 4: Hybrid Architecture Upgrade Changelog
 
-**Document Version:** 1.0
-**Date:** 2026-03-25
-**Scope:** Changes between M3 (v8.5) and M4 (v9.5)
+**Document Version:** 2.0
+**Date:** 2026-03-27
+**Scope:** Changes between M3 (v8.5) and M4 (v10.0)
 
 ---
 
@@ -10,10 +10,12 @@
 
 | Component | M3 State | M4 State | Impact |
 |-----------|----------|----------|--------|
-| deployment | Unreliable Verification | **OIDC Verified CICD** | 100% Deployment Confidence |
+| Deployment | Unreliable Verification | **OIDC Verified CICD** | 100% Deployment Confidence |
 | Proactive | DM-hosted notifications | **Channel-hosted Proactive** | Unified User Experience |
 | Vision | Basic Gemini Flow | **YOLO-Accelerated Pipeline** | Faster Pre-location & Processing |
 | Recovery | Manual Setup | `/sync` Command | User Context Resilience |
+| Fitness | Basic Commands | **Full Suite** | `/fitness`, `/routine`, Add-to-Routine |
+| Reminders | 4 Daily Times | **5 Times (+20:00)** | Evening exercise prompt |
 
 ---
 
@@ -62,6 +64,49 @@
 ### 3.2 Resilience Fixes
 - **Views**: Fixed `NameError` where `interaction` was incorrectly referenced in async helpers.
 - **Bot**: Standardized `heartbeat_timeout` and improved error logging for scheduled tasks.
+
+---
+
+## 4. Fitness Command Suite (v10.0)
+
+### 4.1 `/fitness` Command
+- **File**: `src/discord_bot/commands.py` (`handle_fitness_command`)
+- **Features**:
+  - Category support: cardio, strength, yoga, HIIT, stretch, flexibility
+  - Dynamic prompt building with calorie status context
+  - Visual warnings integration from recent meals
+
+### 4.2 `/routine` Command
+- **File**: `src/discord_bot/commands.py` (`handle_routine_command`)
+- **Features**:
+  - Displays saved exercises from `workout_routines` table
+  - Shows weekly target (3 sessions per exercise)
+  - Displays this week's completed count and total minutes
+
+### 4.3 Add To Routine Button
+- **File**: `src/discord_bot/views.py` (`LogWorkoutView.add_to_routine`)
+- **Fix**: Changed from placeholder to actual DB persistence via `db.add_routine_exercise()`
+
+### 4.4 Evening Exercise Reminder
+- **File**: `src/discord_bot/bot.py` (`evening_exercise_reminder`)
+- **Time**: 20:00 daily
+- **Features**:
+  - Detects high-calorie meals and provides contextual suggestions
+  - Shows quick workout options (yoga, walk, HIIT)
+  - Routes through `_send_proactive_message` for private channel delivery
+
+---
+
+## 5. Bug Fixes & Improvements (v10.0)
+
+### 5.1 Stale Cache Fix for Private Channel
+- **Issue**: `_send_proactive_message` used stale `private_channel_id` from in-memory cache
+- **Fix**: Always fetch fresh preferences from DB with write-through cache update
+- **Files**: `bot.py`, `views.py`
+
+### 5.2 Gitleaks Removal
+- **Issue**: Historical API_KEY patterns in git history caused false positives
+- **Fix**: Removed Gitleaks from CI workflow; use `no-git=true` config for local scanning
 
 ---
 
