@@ -34,38 +34,25 @@ class WgerClient:
     async def search_exercise_image_async(self, exercise_name: str) -> Optional[str]:
         """
         Search for an exercise image by name.
-        Uses the search endpoint for better fuzzy matching.
+        Uses the search endpoint which returns images directly in the response.
         """
-        # Step 1: Use the search endpoint for fuzzy matching
+        # Use the search endpoint for fuzzy matching - it already includes image URLs
         search_results = await self._get("exercise/search/", params={"term": exercise_name})
-        
-        if not search_results or not search_results.get("suggestions"):
-            logger.info(f"No fuzzy matches found for: {exercise_name}, trying exact name filter")
-            search_results = await self._get("exercise/", params={"name": exercise_name})
-        else:
-            # Re-format suggestions to look like standard results for ID extraction
-            temp_results = []
-            for sug in search_results["suggestions"]:
-                if 'data' in sug and 'id' in sug['data']:
-                    temp_results.append({"id": sug['data']['id']})
-            search_results = {"results": temp_results}
 
-        if not search_results or not search_results.get("results"):
+        if not search_results or not search_results.get("suggestions"):
+            logger.info(f"No fuzzy matches found for: {exercise_name}")
             return None
 
-        # Step 2: Iterate through result candidates to find one with an image
-        for candidate in search_results["results"][:3]:
-            exercise_id = candidate["id"]
-            # The filter parameter in wger/exerciseimage is 'exercise'
-            image_results = await self._get("exerciseimage/", params={"exercise": exercise_id})
-            
-            if image_results and image_results.get("results"):
-                # wger images are relative paths sometimes, ensure absolute
-                img_url = image_results["results"][0]["image"]
-                if img_url.startswith("/media/"):
-                    img_url = "https://wger.de" + img_url
-                return img_url
-        
+        # Extract image from the first suggestion that has one
+        for sug in search_results["suggestions"]:
+            if 'data' in sug:
+                img_url = sug['data'].get('image')
+                if img_url:
+                    # wger images are relative paths, ensure absolute
+                    if img_url.startswith("/media/"):
+                        img_url = "https://wger.de" + img_url
+                    return img_url
+
         return None
 
 # Simple test runner
