@@ -11,6 +11,7 @@ Module 3: Dynamic Risk Filtering
 import json
 import logging
 import os
+import threading
 from typing import List, Dict, Any, Optional
 
 from .api_client import ExerciseAPIClient
@@ -87,6 +88,9 @@ class SimpleRagTool:
         
         # Async Wger Client for on-the-fly image fetching
         self.wger_client = WgerClient()
+
+        # Lock to prevent race conditions when swapping exercises for filtering
+        self._exercises_lock = threading.Lock()
         
         logger.info(f"✅ SimpleRagTool initialized: {len(self.exercises)} exercises, {len(self.usda_foods)} foods, {FUZZY_AVAILABLE=}")
 
@@ -259,11 +263,12 @@ class SimpleRagTool:
             if is_safe:
                 safe_list.append(ex)
 
-        # Search within safe exercises
-        original_exercises = self.exercises
-        self.exercises = safe_list
-        recs = self.search_exercises(user_query, limit=top_k)
-        self.exercises = original_exercises
+        # Search within safe exercises (use lock to prevent race conditions)
+        with self._exercises_lock:
+            original_exercises = self.exercises
+            self.exercises = safe_list
+            recs = self.search_exercises(user_query, limit=top_k)
+            self.exercises = original_exercises
 
         # Build safety warnings
         safety_warnings = []

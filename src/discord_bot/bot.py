@@ -426,6 +426,8 @@ class HealthButlerDiscordBot(Client):
         # Ensure swarm is initialized (lazy load guard)
         if not self.swarm:
             logger.warning(f"⏳ Drop message from {message.author}: Swarm not ready")
+            # Extract clean_content for the ping check (needed since swarm not ready)
+            clean_content = message.content.replace(f"<@!{self.user.id}>", "").replace(f"<@{self.user.id}>", "").strip()
             if clean_content.lower() != "ping":
                 await message.reply("⏳ I'm still warming up my brain... please try again in 30 seconds!")
             return
