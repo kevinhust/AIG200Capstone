@@ -728,23 +728,10 @@ class HealthButlerDiscordBot(Client):
                         user_context=user_context
                     )
 
-                # Persist scanned meals only (image uploads). Text-only nutrition queries should NOT
-                # auto-affect consumed totals.
+                # NOTE: Do NOT auto-persist meals here. The user must first adjust serving
+                # (if needed) and then click "Add to Today" to save. This ensures the
+                # correct (possibly scaled) macros are saved.
                 latest_meal = None
-                if image_attachment:
-                    try:
-                        parsed = self._extract_json_payload(result.get("response") or "")
-                        macros = (parsed or {}).get("total_macros", {}) if isinstance(parsed, dict) else {}
-                        calories = self._to_float(macros.get("calories", 0), 0.0)
-                        confidence = self._to_float(
-                            (parsed or {}).get("confidence_score", (parsed or {}).get("total_confidence", 0.0)),
-                            0.0,
-                        )
-                        # Avoid logging "no food detected" / 0-kcal scans automatically.
-                        if calories > 0 and confidence >= 0.10:
-                            latest_meal = await self._persist_meal_data(result["response"], str(message.author.id))
-                    except Exception:
-                        latest_meal = None
 
                 await self._send_swarmed_response(
                     message.channel,
