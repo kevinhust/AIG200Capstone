@@ -1194,6 +1194,9 @@ class MealLogView(discord.ui.View):
         self.nutrition_payload = nutrition_payload
         self.logged_meal = logged_meal or None
 
+        # Store original full-portion macros before any serving adjustment
+        self._full_portion_macros = dict(nutrition_payload.get("total_macros", {}) or {})
+
         try:
             super().__init__(timeout=3600)
         except RuntimeError:
@@ -1222,6 +1225,20 @@ class MealLogView(discord.ui.View):
         else:
             embed.title = "📝 " + (embed.title or "Nutrition Analysis")
             embed.set_footer(text=(embed.footer.text + " • Not logged yet") if embed.footer and embed.footer.text else "Not logged yet")
+
+        # Show serving adjustment info if multiplier != 1.0
+        serving_mult = self.nutrition_payload.get("serving_multiplier", 1.0)
+        if serving_mult and serving_mult != 1.0:
+            current_cals = self.nutrition_payload.get("total_macros", {}).get("calories", 0)
+            full_cals = self._full_portion_macros.get("calories", 0)
+            if full_cals > 0:
+                pct = int(serving_mult * 100)
+                embed.add_field(
+                    name="🍽️ Serving Size",
+                    value=f"**{pct}%** of full portion ({full_cals:.0f} kcal → {current_cals:.0f} kcal)",
+                    inline=False
+                )
+
         self._sync_button_states()
         await interaction.message.edit(embed=embed, view=self)
 
