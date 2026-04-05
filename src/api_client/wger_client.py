@@ -16,20 +16,32 @@ class WgerClient:
             "Accept": "application/json",
             "User-Agent": "HealthButlerBot/1.0 (https://github.com/kevinhust/capstonetest)"
         }
+        self._session: Optional[aiohttp.ClientSession] = None
+
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create a shared aiohttp session for connection pooling."""
+        if self._session is None or self._session.closed:
+            self._session = aiohttp.ClientSession(headers=self.headers)
+        return self._session
+
+    async def close(self):
+        """Close the shared session."""
+        if self._session and not self._session.closed:
+            await self._session.close()
 
     async def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         url = f"{self.base_url}{endpoint.lstrip('/')}"
-        async with aiohttp.ClientSession(headers=self.headers) as session:
-            try:
-                async with session.get(url, params=params, timeout=10) as response:
-                    if response.status == 200:
-                        return await response.json()
-                    else:
-                        logger.warning(f"Wger API error: {response.status} at {url}")
-                        return None
-            except Exception as e:
-                logger.error(f"Wger API connection failed: {e}")
-                return None
+        session = await self._get_session()
+        try:
+            async with session.get(url, params=params, timeout=10) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    logger.warning(f"Wger API error: {response.status} at {url}")
+                    return None
+        except Exception as e:
+            logger.error(f"Wger API connection failed: {e}")
+            return None
 
     async def search_exercise_image_async(self, exercise_name: str) -> Optional[str]:
         """

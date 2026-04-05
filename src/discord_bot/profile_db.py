@@ -250,12 +250,14 @@ class ProfileDB:
             .execute()
         
         meals = response.data
+        has_high_calorie_meal = any(m.get("calories", 0) > 500 for m in meals if m.get("calories"))
         stats = {
             "meal_count": len(meals),
             "total_calories": sum(m.get("calories", 0) for m in meals if m.get("calories")),
             "total_protein": sum(m.get("protein_g", 0) for m in meals if m.get("protein_g")),
             "total_carbs": sum(m.get("carbs_g", 0) for m in meals if m.get("carbs_g")),
-            "total_fat": sum(m.get("fat_g", 0) for m in meals if m.get("fat_g"))
+            "total_fat": sum(m.get("fat_g", 0) for m in meals if m.get("fat_g")),
+            "has_high_calorie_meal": has_high_calorie_meal
         }
         return stats
 

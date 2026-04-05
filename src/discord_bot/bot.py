@@ -351,12 +351,8 @@ class HealthButlerDiscordBot(Client):
 
                 if stats["total_calories"] > target * 0.8:
                     calorie_status = "over 80% of daily calories consumed"
-                elif pu.profile_db:
-                    meals = pu.profile_db.get_meals(user_id, limit=3)
-                    for meal in meals:
-                        if meal.get("calories", 0) > 500:
-                            calorie_status = "had a heavy meal"
-                            break
+                elif pu.profile_db and stats.get("has_high_calorie_meal"):
+                    calorie_status = "had a heavy meal"
 
                 embed = discord.Embed(
                     title="🏃 Time to Move!",
