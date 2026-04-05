@@ -939,11 +939,24 @@ RAG SAFE EXERCISES: {safe_ex_list}.
             img_map = {e['name'].lower(): e.get('image_url') for e in safe_exercises}
             for rec in result_json.get("recommendations", []):
                 rec_name = rec.get("name", "").lower()
-                if not rec.get("image_url") and rec_name in img_map:
-                    rec["image_url"] = img_map[rec_name]
-                elif not rec.get("image_url"):
-                    # Last resort: try to fetch for the specific name returned by LLM
-                    rec["image_url"] = await self.rag.wger_client.search_exercise_image_async(rec.get("name"))
+                image_url = rec.get("image_url")
+
+                # Try exact match first
+                if not image_url and rec_name in img_map:
+                    image_url = img_map[rec_name]
+
+                # Try substring match (e.g., "elliptical" matches "elliptical machine")
+                if not image_url:
+                    for rag_name, rag_url in img_map.items():
+                        if rec_name in rag_name or rag_name in rec_name:
+                            image_url = rag_url
+                            break
+
+                # Last resort: fetch from wger API
+                if not image_url:
+                    image_url = await self.rag.wger_client.search_exercise_image_async(rec.get("name"))
+
+                rec["image_url"] = image_url
 
             # Safety validation (Restored from sync version)
             if visual_warnings and "recommendations" in result_json:
