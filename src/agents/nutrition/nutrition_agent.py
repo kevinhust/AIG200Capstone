@@ -431,7 +431,8 @@ CRITICAL RULES:
                 # YOLO hints are CPU bound, run in thread or async wrapper
                 hints = await self.vision_tool.detect_food_async(image_path)
                 # Re-run the reconciliation logic (moved to helper for reuse)
-                yolo_hints = self._process_yolo_raw(hints, image_path)
+                # PIL operations are CPU-bound, offload to thread pool to avoid blocking event loop
+                yolo_hints = await asyncio.to_thread(self._process_yolo_raw, hints, image_path)
                 if progress_callback:
                     labels = [h["label"] for h in yolo_hints]
                     hint_str = f"🔍 Objects detected: {', '.join(labels)}" if labels else "🔍 Analyzing image..."

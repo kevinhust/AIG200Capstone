@@ -2,11 +2,18 @@ from typing import Optional, List, Dict, Any
 import logging
 import json
 import re
+import threading
 from functools import lru_cache
 from src.agents.base_agent import BaseAgent
 from src.data_rag.simple_rag_tool import SimpleRagTool
 
 logger = logging.getLogger(__name__)
+
+# Module-level profile cache shared across all FitnessAgent instances
+# Key: discord_user_id, Value: (profile_dict, timestamp)
+_PROFILE_CACHE: Dict[str, tuple] = {}
+_CACHE_LOCK = threading.Lock()
+_CACHE_TTL_SECONDS = 300  # 5 minutes
 
 # Default profile for users without Supabase data
 DEFAULT_USER_PROFILE = {
@@ -64,7 +71,6 @@ class FitnessAgent(BaseAgent):
         """
         # Lazy import to avoid circular dependencies
         self._db = db
-        self._profile_cache: Dict[str, Dict[str, Any]] = {}
 
         base_prompt = """You are an expert Fitness Coach and Wellness Assistant.
 Your goal is to provide safe, actionable exercise advice.
@@ -125,10 +131,14 @@ Before finalizing recommendations, verify:
         Returns:
             Standardized user profile dict
         """
-        # Check cache first (valid for single session)
-        if discord_user_id in self._profile_cache:
-            logger.debug(f"[FitnessAgent] Cache hit for user {discord_user_id}")
-            return self._profile_cache[discord_user_id]
+        import time
+        # Check module-level cache first with TTL
+        with _CACHE_LOCK:
+            if discord_user_id in _PROFILE_CACHE:
+                cached_profile, timestamp = _PROFILE_CACHE[discord_user_id]
+                if time.time() - timestamp < _CACHE_TTL_SECONDS:
+                    logger.debug(f"[FitnessAgent] Cache hit for user {discord_user_id}")
+                    return cached_profile
 
         try:
             profile = self.db.get_profile(discord_user_id)
@@ -159,8 +169,10 @@ Before finalizing recommendations, verify:
                 user_context = {**DEFAULT_USER_PROFILE, "discord_user_id": discord_user_id}
                 logger.warning(f"[FitnessAgent] No profile found for {discord_user_id}, using defaults")
 
-            # Cache for session
-            self._profile_cache[discord_user_id] = user_context
+            # Cache for session (module-level, shared across instances)
+            import time
+            with _CACHE_LOCK:
+                _PROFILE_CACHE[discord_user_id] = (user_context, time.time())
             return user_context
 
         except Exception as e:
@@ -927,11 +939,24 @@ RAG SAFE EXERCISES: {safe_ex_list}.
             img_map = {e['name'].lower(): e.get('image_url') for e in safe_exercises}
             for rec in result_json.get("recommendations", []):
                 rec_name = rec.get("name", "").lower()
-                if not rec.get("image_url") and rec_name in img_map:
-                    rec["image_url"] = img_map[rec_name]
-                elif not rec.get("image_url"):
-                    # Last resort: try to fetch for the specific name returned by LLM
-                    rec["image_url"] = await self.rag.wger_client.search_exercise_image_async(rec.get("name"))
+                image_url = rec.get("image_url")
+
+                # Try exact match first
+                if not image_url and rec_name in img_map:
+                    image_url = img_map[rec_name]
+
+                # Try substring match (e.g., "elliptical" matches "elliptical machine")
+                if not image_url:
+                    for rag_name, rag_url in img_map.items():
+                        if rec_name in rag_name or rag_name in rec_name:
+                            image_url = rag_url
+                            break
+
+                # Last resort: fetch from wger API
+                if not image_url:
+                    image_url = await self.rag.wger_client.search_exercise_image_async(rec.get("name"))
+
+                rec["image_url"] = image_url
 
             # Safety validation (Restored from sync version)
             if visual_warnings and "recommendations" in result_json:

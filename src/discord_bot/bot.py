@@ -351,12 +351,8 @@ class HealthButlerDiscordBot(Client):
 
                 if stats["total_calories"] > target * 0.8:
                     calorie_status = "over 80% of daily calories consumed"
-                elif pu.profile_db:
-                    meals = pu.profile_db.get_meals(user_id, limit=3)
-                    for meal in meals:
-                        if meal.get("calories", 0) > 500:
-                            calorie_status = "had a heavy meal"
-                            break
+                elif pu.profile_db and stats.get("has_high_calorie_meal"):
+                    calorie_status = "had a heavy meal"
 
                 embed = discord.Embed(
                     title="🏃 Time to Move!",
@@ -426,6 +422,8 @@ class HealthButlerDiscordBot(Client):
         # Ensure swarm is initialized (lazy load guard)
         if not self.swarm:
             logger.warning(f"⏳ Drop message from {message.author}: Swarm not ready")
+            # Extract clean_content for the ping check (needed since swarm not ready)
+            clean_content = message.content.replace(f"<@!{self.user.id}>", "").replace(f"<@{self.user.id}>", "").strip()
             if clean_content.lower() != "ping":
                 await message.reply("⏳ I'm still warming up my brain... please try again in 30 seconds!")
             return
@@ -730,23 +728,10 @@ class HealthButlerDiscordBot(Client):
                         user_context=user_context
                     )
 
-                # Persist scanned meals only (image uploads). Text-only nutrition queries should NOT
-                # auto-affect consumed totals.
+                # NOTE: Do NOT auto-persist meals here. The user must first adjust serving
+                # (if needed) and then click "Add to Today" to save. This ensures the
+                # correct (possibly scaled) macros are saved.
                 latest_meal = None
-                if image_attachment:
-                    try:
-                        parsed = self._extract_json_payload(result.get("response") or "")
-                        macros = (parsed or {}).get("total_macros", {}) if isinstance(parsed, dict) else {}
-                        calories = self._to_float(macros.get("calories", 0), 0.0)
-                        confidence = self._to_float(
-                            (parsed or {}).get("confidence_score", (parsed or {}).get("total_confidence", 0.0)),
-                            0.0,
-                        )
-                        # Avoid logging "no food detected" / 0-kcal scans automatically.
-                        if calories > 0 and confidence >= 0.10:
-                            latest_meal = await self._persist_meal_data(result["response"], str(message.author.id))
-                    except Exception:
-                        latest_meal = None
 
                 await self._send_swarmed_response(
                     message.channel,
