@@ -123,7 +123,7 @@ class HealthButlerDiscordBot(Client):
         # Optional demo safety allowlists (comma-separated IDs). Empty => allow all.
         self.allowed_user_ids = pu._parse_int_set(os.getenv("DISCORD_ALLOWED_USER_IDS"))
         self.allowed_channel_ids = pu._parse_int_set(os.getenv("DISCORD_ALLOWED_CHANNEL_IDS"))
-        self.engagement_agent = EngagementAgent()
+        self.engagement_agent = EngagementAgent(use_openai_api=False)
         self.analytics_agent = AnalyticsAgent()
         logger.info("Health Butler Discord Bot initialized with Engagement and Analytics Agents")
 

@@ -28,14 +28,14 @@ class ProfileDB:
         if create_client is None:
             raise RuntimeError("supabase package is not installed")
         self.url: str = os.getenv("SUPABASE_URL", "")
-        self.key: str = (
-            os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
-            or os.getenv("SUPABASE_KEY", "")
-        )
+        # Use service role key to bypass RLS for demo (dev only)
+        # In production, configure proper RLS policies
+        self.key: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "") or os.getenv("SUPABASE_KEY", "")
 
         if not self.url or not self.key:
             raise RuntimeError(
-                "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_KEY) must be set in environment variables"
+                "SUPABASE_URL and SUPABASE_KEY must be set in environment variables. "
+                "Note: Use SUPABASE_KEY (anon key) for client operations with RLS."
             )
 
         self.client: Client = create_client(self.url, self.key)
@@ -148,14 +148,20 @@ class ProfileDB:
 
     def delete_profile(self, discord_user_id: str) -> bool:
         """Delete user profile from database.
-        
+
         Args:
             discord_user_id: Discord user ID
-            
+
         Returns:
             True if successful
         """
         try:
+            # Delete related records first (meals, daily_logs, workout_logs, etc.)
+            self.client.table("meals").delete().eq("user_id", discord_user_id).execute()
+            self.client.table("daily_logs").delete().eq("user_id", discord_user_id).execute()
+            self.client.table("workout_logs").delete().eq("user_id", discord_user_id).execute()
+            self.client.table("workout_routines").delete().eq("user_id", discord_user_id).execute()
+            # Finally delete the profile
             response = self.client.table("profiles").delete().eq("id", discord_user_id).execute()
             return True
         except Exception as exc:
