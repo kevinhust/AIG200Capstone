@@ -601,21 +601,40 @@ class RegistrationViewB(ui.View):
             # SAVE TO SUPABASE
             from src.discord_bot.profile_db import get_profile_db
             db = get_profile_db()
-            
-            # Use create_profile for new registrations
-            db.create_profile(
-                discord_user_id=self.user_id,
-                full_name=self.profile_buffer["name"],
-                age=int(self.profile_buffer["age"]),
-                gender=self.profile_buffer["gender"],
-                height_cm=float(self.profile_buffer["height_cm"]),
-                weight_kg=float(self.profile_buffer["weight_kg"]),
-                goal=self.profile_buffer["goal"],
-                conditions=conditions,
-                activity=self.profile_buffer["activity"],
-                diet=self.selected_allergies,
-                preferences=self.profile_buffer["preferences_json"]
-            )
+
+            # Check if profile already exists - use update if so, create if not
+            existing = db.get_user_profile(self.user_id)
+
+            if existing:
+                # Update existing profile
+                db.update_profile(
+                    discord_user_id=self.user_id,
+                    full_name=self.profile_buffer["name"],
+                    age=int(self.profile_buffer["age"]),
+                    gender=self.profile_buffer["gender"],
+                    height_cm=float(self.profile_buffer["height_cm"]),
+                    weight_kg=float(self.profile_buffer["weight_kg"]),
+                    goal=self.profile_buffer["goal"],
+                    restrictions=", ".join(conditions) if conditions and "None" not in conditions else None,
+                    activity=self.profile_buffer["activity"],
+                    diet=", ".join(self.selected_allergies) if self.selected_allergies else None,
+                    preferences_json=self.profile_buffer.get("preferences_json"),
+                )
+            else:
+                # Create new profile
+                db.create_profile(
+                    discord_user_id=self.user_id,
+                    full_name=self.profile_buffer["name"],
+                    age=int(self.profile_buffer["age"]),
+                    gender=self.profile_buffer["gender"],
+                    height_cm=float(self.profile_buffer["height_cm"]),
+                    weight_kg=float(self.profile_buffer["weight_kg"]),
+                    goal=self.profile_buffer["goal"],
+                    conditions=conditions,
+                    activity=self.profile_buffer["activity"],
+                    diet=self.selected_allergies,
+                    preferences=self.profile_buffer.get("preferences_json")
+                )
 
             # Build Welcome Embed
             embed = discord.Embed(
