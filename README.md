@@ -18,7 +18,7 @@ Personal Health Butler v8.5 introduces a **Modular Decoupled Architecture**, tra
 | Component | Core Technologies | Key Capabilities |
 | :--- | :--- | :--- |
 | **👁️ Perception** | **YOLO11 + Gemini 2.5 Flash** | Real-time food localization + semantic analysis. Latency < 5s. |
-| **🧠 Intelligence** | **Agentic Swarm Protocol** | Nutrition, Fitness, and Engagement coordination with context handoffs. |
+| **🧠 Intelligence** | **HealthSwarm Protocol** | 6-agent coordination: Nutrition, Fitness, Engagement, Analytics, RepCount, Coordinator. |
 | **🛡️ Safety** | **BR-001 Safety Shield** | Dynamic RAG-based exercise filtering. Blocks intense workouts post-heavy-meals. |
 | **🔒 Privacy** | **Sensitive Intent Rerouting** | Automated PII protection. Redirects trends/summaries from public channels to DMs. |
 | **💾 Persistence** | **Supabase + RLS** | Secure, per-user health history, metabolic profiling, and achievement tracking. |
@@ -35,17 +35,28 @@ The bot supports Slash commands (`/`), Natural Language triggers, and Interactiv
 | :--- | :--- | :--- |
 | `/setup` | Onboarding | Initialize or update your health metrics (Height, Weight, Goals). |
 | `/demo` | Quick Start | Activate demo mode with a pre-configured health persona. |
-| `/help` | Guidance | **[NEW]** Tiered help system (Onboarding, Logging, Privacy, Support). |
-| `/roulette` | Gamification | **[NEW]** Spin the 🎰 Food Roulette for budget-aware meal ideas. |
-| `/trends` | Analytics | Generate a 30-day visual health report (Auto-rerouted to DM). |
-| `/summary` | Analytics | Real-time daily macro/calorie report (Auto-rerouted to DM). |
-| `/settings` | Preferences | Toggle proactive morning check-ins and notification intensity. |
 | `/reset` | Danger Zone | Wipe your persistent profile and history. |
+| `/help` | Guidance | Tiered help system (Onboarding, Logging, Privacy, Support). |
+| `/fitness [category]` | Fitness | Get workout recommendations (cardio, strength, yoga, hiit, etc.) |
+| `/routine` | Fitness | View your saved workout routine and weekly progress. |
+| `/roulette` | Gamification | Spin the 🎰 Food Roulette for budget-aware meal ideas. |
+| `/trends` | Analytics | Generate a 30-day visual health report (Auto-rerouted to DM). |
+| `/settings` | Preferences | Toggle proactive morning check-ins and notification intensity. |
+| `/sync` | Recovery | Manual channel recovery / sync Discord private channel. |
+| `/repcount [exercise]` | CV | AI rep counting from workout video using MediaPipe Pose. |
+| `ping` | System | Health check — verify bot is online. |
+| **Upload Food Photo** | Vision | YOLO11 + Gemini Vision analyzes meal, returns macros + health score. |
 
 ### 🧠 Intent-Based Triggers
-- **Greeting**: "hi", "hello" → Triggers premium onboarding flow.
-- **Profiling**: "Who am I?", "my profile" → Displays current health metrics.
-- **Support**: "I need help", "help" → Triggers the segmented help embed.
+
+| Pattern | Action |
+| :--- | :--- |
+| `hi`, `hello`, `start` | Triggers premium onboarding flow. |
+| `Who am I?`, `my profile`, `whoami` | Displays current health metrics. |
+| `Summary`, `stats`, `today's calories` | Real-time daily macro/calorie report (Auto-rerouted to DM). |
+| `I need help`, `help`, `commands` | Triggers the segmented help embed. |
+| Food photo upload | YOLO11 + Gemini Vision → macro analysis + DV% dashboard. |
+| Health-related queries | Routes to appropriate agent (Nutrition/Fitness/Engagement). |
 
 ---
 
@@ -54,20 +65,24 @@ The bot supports Slash commands (`/`), Natural Language triggers, and Interactiv
 ```mermaid
 sequenceDiagram
     participant User
-    participant Discord as Discord UI (views.py)
-    participant Swarm as Swarm Orchestrator
-    participant Nutrition as Nutrition Agent (YOLO11)
-    participant Fitness as Fitness Agent (RAG)
-    
+    participant Discord as Discord UI
+    participant Swarm as HealthSwarm
+    participant Coordinator as CoordinatorAgent
+    participant Nutrition as Nutrition Agent
+    participant Fitness as Fitness Agent
+    participant Engagement as Engagement Agent
+
     User->>Discord: Uploads Meal Image
-    Discord->>Nutrition: Detect & Analyze
-    Nutrition-->>Nutrition: YOLO11 Localization
-    Nutrition-->>Discord: Returns Macros + `HealthMemo`
-    Discord->>User: Renders Macro Dashboard
-    Note right of Discord: Post-meal Safety Analysis
-    Discord->>Fitness: Pass `HealthMemo` (Context Handoff)
-    Fitness-->>Fitness: Apply BR-001 Injury/Nutr Shield
-    Fitness-->>User: Suggests safe intensity recovery exercise
+    Discord->>Swarm: Route to appropriate agent
+    Swarm->>Coordinator: Health-specific routing
+    Coordinator->>Nutrition: Detect & Analyze
+    Nutrition-->>Nutrition: YOLO11 + Gemini Vision
+    Nutrition-->>Discord: Macros + `HealthMemo`
+    Discord->>User: Macro Dashboard
+    Note over Coordinator: Health Memo Protocol
+    Coordinator->>Fitness: Pass `HealthMemo` (Context Handoff)
+    Fitness-->>Fitness: BR-001 Safety Filter
+    Fitness-->>User: Safe workout recommendation
 ```
 
 ---
