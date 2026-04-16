@@ -1368,8 +1368,12 @@ class MealLogView(discord.ui.View):
                 meal_id = (created or {}).get("id")
                 record["meal_id"] = meal_id or f"db-unknown-{uuid.uuid4().hex[:10]}"
                 self.logged_meal = record
-                from datetime import date
-                pu.profile_db.recompute_daily_log_from_meals(self.user_id, date.today())
+                # Try to update daily log summary (may fail due to RLS - meal is still logged)
+                try:
+                    from datetime import date
+                    pu.profile_db.recompute_daily_log_from_meals(self.user_id, date.today())
+                except Exception as log_exc:
+                    logger.warning(f"Could not update daily_log summary (RLS issue): {log_exc}")
             except Exception as exc:
                 return await interaction.response.send_message(f"Failed to log meal: {exc}", ephemeral=True)
         else:
