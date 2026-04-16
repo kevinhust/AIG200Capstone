@@ -603,7 +603,7 @@ class RegistrationViewB(ui.View):
             db = get_profile_db()
 
             # Check if profile already exists - use update if so, create if not
-            existing = db.get_user_profile(self.user_id)
+            existing = db.get_profile(self.user_id)
 
             if existing:
                 # Update existing profile
